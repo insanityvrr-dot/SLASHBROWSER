@@ -1778,10 +1778,9 @@ class SLASHBrowser(QMainWindow):
             return
             
         # 2. Get local commit SHA
-        local_sha = self.config.get("installed_commit", "")
-        
-        # If we don't have a local commit saved, try to get it from local git CLI
-        if not local_sha:
+        local_sha = ""
+        is_git = os.path.exists(os.path.join(self.project_root, ".git"))
+        if is_git:
             try:
                 res = subprocess.run(
                     ["git", "rev-parse", "HEAD"],
@@ -1792,11 +1791,12 @@ class SLASHBrowser(QMainWindow):
                 )
                 if res.returncode == 0:
                     local_sha = res.stdout.strip()
-                    self.config["installed_commit"] = local_sha
-                    save_config(self.config)
             except Exception as e:
                 print(f"Failed to get local git commit: {e}")
                 
+        if not local_sha:
+            local_sha = self.config.get("installed_commit", "")
+            
         # 3. If local_sha is still empty (no git, not saved), seed it with remote_sha to prevent startup popup
         if not local_sha:
             self.config["installed_commit"] = remote_sha
@@ -1855,6 +1855,7 @@ class SLASHBrowser(QMainWindow):
                     if getattr(sys, 'frozen', False):
                         set_status("Preparing Windows build-from-source pipeline (PyInstaller)...")
                         script_content = f"""@echo off
+set SLASH_UPDATE=1
 echo ===================================================
 echo   🔄 SLASH Auto-Updater: Compiling New Improvements
 echo ===================================================
@@ -1877,6 +1878,7 @@ exit
                     else:
                         set_status("Preparing Windows Python source update pipeline...")
                         script_content = f"""@echo off
+set SLASH_UPDATE=1
 echo ===================================================
 echo   🔄 SLASH Auto-Updater: Applying Python Source
 echo ===================================================
@@ -1906,8 +1908,31 @@ exit
                     # Linux/macOS
                     sh_path = os.path.join(self.project_root, "linux_update.sh")
                     
-                    set_status("Preparing Linux update script...")
-                    script_content = f"""#!/bin/bash
+                    if getattr(sys, 'frozen', False):
+                        set_status("Preparing Linux build-from-source pipeline (PyInstaller)...")
+                        script_content = f"""#!/bin/bash
+echo "==================================================="
+echo "  🔄 SLASH Auto-Updater: Compiling New Improvements"
+echo "==================================================="
+sleep 2
+echo "Pulling latest improvements from git..."
+git stash
+git pull
+git stash pop || true
+echo "Rebuilding Linux executable..."
+bash compile_linux.sh
+echo "Launching updated SLASH Browser..."
+if [ -f "dist/SLASH" ]; then
+    ./dist/SLASH &
+else
+    ./venv/bin/python browser.py &
+fi
+rm -- "$0"
+exit 0
+"""
+                    else:
+                        set_status("Preparing Linux update script...")
+                        script_content = f"""#!/bin/bash
 echo "==================================================="
 echo "  🔄 SLASH Auto-Updater: Applying Improvements"
 echo "==================================================="
@@ -1964,6 +1989,7 @@ exit 0
                     bat_path = os.path.join(self.project_root, "win_replace_update.bat")
                     if getattr(sys, 'frozen', False):
                         script_content = f"""@echo off
+set SLASH_UPDATE=1
 echo Waiting for SLASH to close...
 timeout /t 2 /nobreak >nul
 move /y "browser.py.tmp" "browser.py"
@@ -1976,6 +2002,7 @@ exit
 """
                     else:
                         script_content = f"""@echo off
+set SLASH_UPDATE=1
 echo Waiting for SLASH to close...
 timeout /t 2 /nobreak >nul
 move /y "browser.py.tmp" "browser.py"
@@ -1994,7 +2021,23 @@ exit
                     
                 else:
                     sh_path = os.path.join(self.project_root, "linux_replace_update.sh")
-                    script_content = f"""#!/bin/bash
+                    if getattr(sys, 'frozen', False):
+                        script_content = f"""#!/bin/bash
+sleep 2
+mv -f "browser.py.tmp" "browser.py"
+mv -f "home.html.tmp" "home.html"
+echo "Rebuilding Linux executable..."
+bash compile_linux.sh
+if [ -f "dist/SLASH" ]; then
+    ./dist/SLASH &
+else
+    ./venv/bin/python browser.py &
+fi
+rm -- "$0"
+exit 0
+"""
+                    else:
+                        script_content = f"""#!/bin/bash
 sleep 2
 mv -f "browser.py.tmp" "browser.py"
 mv -f "home.html.tmp" "home.html"

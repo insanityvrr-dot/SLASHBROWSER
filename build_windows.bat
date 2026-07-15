@@ -15,7 +15,7 @@ if %errorlevel% neq 0 (
         echo ❌ Error: Failed to download Python installer automatically.
         echo Please ensure you are connected to the Internet, or download Python manually from:
         echo https://www.python.org/
-        pause
+        if not defined SLASH_UPDATE pause
         exit /b 1
     )
     echo ⚙️ Installing Python silently (User-level, with pip, added to PATH)...
@@ -33,7 +33,7 @@ if %errorlevel% neq 0 (
         echo ❌ Error: Python silent installation completed but Python is still not found in PATH.
         echo Please restart this terminal or install Python manually from:
         echo https://www.python.org/
-        pause
+        if not defined SLASH_UPDATE pause
         exit /b 1
     )
     echo ✅ Python installed and configured successfully!
@@ -47,7 +47,7 @@ if not exist win_venv (
     python -m venv win_venv
     if %errorlevel% neq 0 (
         echo ❌ Error: Failed to create virtual environment.
-        pause
+        if not defined SLASH_UPDATE pause
         exit /b 1
     )
 )
@@ -59,7 +59,7 @@ python -m pip install --upgrade pip
 pip install PyQt6 PyQt6-WebEngine pyinstaller
 if %errorlevel% neq 0 (
     echo ❌ Error: Failed to install python packages.
-    pause
+    if not defined SLASH_UPDATE pause
     exit /b 1
 )
 
@@ -68,7 +68,7 @@ echo 🔨 Compiling browser.py into standalone executable...
 pyinstaller --noconsole --onefile --add-data "home.html;." --name="SLASH" browser.py
 if %errorlevel% neq 0 (
     echo ❌ Error: PyInstaller compilation failed.
-    pause
+    if not defined SLASH_UPDATE pause
     exit /b 1
 )
 
@@ -86,4 +86,4 @@ echo.
 echo A Windows Desktop shortcut 'SLASH' has been created for you.
 echo You can now close this window.
 echo ==========================================================
-pause
+if not defined SLASH_UPDATE pause
