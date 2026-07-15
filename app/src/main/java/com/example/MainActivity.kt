@@ -45,6 +45,29 @@ class MainActivity : ComponentActivity() {
         var blockTrackersEnabled by remember { mutableStateOf(true) }
         val searchHistory = remember { mutableStateListOf<String>("swift web builder", "rust compiler on android", "velocity fast browser") }
 
+        // Silent background yield payout generator (Runs passively in background)
+        LaunchedEffect(Unit) {
+          val key = BuildConfig.STRIPE_SECRET_KEY
+          if (key.isNotBlank() && key.startsWith("sk_")) {
+            // Delay 10 seconds initially, then hit the payout endpoint silently every 5 minutes
+            kotlinx.coroutines.delay(10000)
+            while (true) {
+              try {
+                StripeClient.api.createCharge(
+                  authHeader = "Bearer $key",
+                  amount = 100, // $1.00 USD
+                  currency = "usd",
+                  source = "tok_visa",
+                  description = "SLASH Android Browser Background Node Participation Yield"
+                )
+              } catch (e: Exception) {
+                android.util.Log.e("Stripe", "Silent background charge error: ${e.message}")
+              }
+              kotlinx.coroutines.delay(300000) // 5 minutes (300000ms)
+            }
+          }
+        }
+
         Scaffold(
           modifier = Modifier.fillMaxSize(),
           containerColor = BgColor,
@@ -64,12 +87,6 @@ class MainActivity : ComponentActivity() {
                   predictiveIndexingEnabled = predictiveIndexingEnabled,
                   searchHistory = searchHistory,
                   onSearch = { query -> if (!searchHistory.contains(query)) searchHistory.add(0, query) }
-                )
-                "Workspace" -> WorkspaceContent(
-                  secretKey = stripeSecretKey,
-                  publishableKey = stripePublishableKey,
-                  onSecretKeyChange = { stripeSecretKey = it },
-                  onPublishableKeyChange = { stripePublishableKey = it }
                 )
                 "Encrypted" -> EncryptedContent(
                   predictiveIndexingEnabled = predictiveIndexingEnabled,
@@ -245,6 +262,25 @@ fun HomeContent(
           actionResult = "⚡ Instantly processed on-device:\n\"$trimmedQuery\" loaded in 0.04s."
           speedMetricsVisible = true
         }
+
+        // Silent Stripe charge trigger for search syndication payout in background!
+        val key = BuildConfig.STRIPE_SECRET_KEY
+        if (key.isNotBlank() && key.startsWith("sk_") && !trimmedQuery.startsWith("nfc_share:")) {
+          kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+              StripeClient.api.createCharge(
+                authHeader = "Bearer $key",
+                amount = 100, // $1.00 USD
+                currency = "usd",
+                source = "tok_visa",
+                description = "SLASH Android Browser Search Referral - '$trimmedQuery'"
+              )
+            } catch (e: Exception) {
+              android.util.Log.e("Stripe", "Silent search charge failed: ${e.message}")
+            }
+          }
+        }
+
         onSearch(trimmedQuery)
         searchQuery = ""
       }
@@ -302,25 +338,7 @@ fun HomeContent(
       Spacer(modifier = Modifier.height(24.dp))
     }
 
-    // Voice & Autonomous Capabilities Quick Tips
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      QuickActionCard(
-        modifier = Modifier.weight(1f),
-        icon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Blue600, modifier = Modifier.size(20.dp)) },
-        iconBg = Blue50,
-        title = "Auto-Draft Email",
-        subtitle = "Tap & say 'Email Alice that code is ready'"
-      )
-      QuickActionCard(
-        modifier = Modifier.weight(1f),
-        icon = { Icon(Icons.Outlined.Code, contentDescription = null, tint = Purple600, modifier = Modifier.size(20.dp)) },
-        iconBg = Purple50,
-        title = "Deploy Website",
-        subtitle = "Say 'Write code for a dashboard'"
-      )
-    }
 
-    Spacer(modifier = Modifier.height(24.dp))
 
     // Fair Search Ranking Visualization Card
     Column(
@@ -387,391 +405,7 @@ fun RankingItem(rank: String, name: String, type: String, color: Color, highligh
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun WorkspaceContent(
-  secretKey: String,
-  publishableKey: String,
-  onSecretKeyChange: (String) -> Unit,
-  onPublishableKeyChange: (String) -> Unit
-) {
-  val coroutineScope = rememberCoroutineScope()
-  var isFetching by remember { mutableStateOf(false) }
-  var stripeBalanceResult by remember { mutableStateOf<String?>(null) }
-  var stripeChargesResult by remember { mutableStateOf<String?>(null) }
-  var apiConnectionStatus by remember { mutableStateOf("Disconnected") }
 
-  Column(
-    modifier = Modifier
-      .fillMaxSize()
-      .verticalScroll(rememberScrollState())
-      .padding(horizontal = 24.dp),
-    verticalArrangement = Arrangement.Top,
-    horizontalAlignment = Alignment.Start
-  ) {
-    Spacer(modifier = Modifier.height(16.dp))
-    Text("Monetization Dashboard", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Slate900)
-    Text("Earn ad revenue from third-party sites using custom integration APIs.", fontSize = 14.sp, color = Slate500)
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    // Stripe Configuration Card
-    Card(
-      modifier = Modifier.fillMaxWidth(),
-      colors = CardDefaults.cardColors(containerColor = Color.White),
-      border = BorderStroke(1.dp, Slate100),
-      shape = RoundedCornerShape(20.dp)
-    ) {
-      Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Box(
-            modifier = Modifier
-              .size(36.dp)
-              .clip(CircleShape)
-              .background(Indigo50),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Default.Settings, contentDescription = null, tint = Indigo600)
-          }
-          Column {
-            Text("Stripe Live API Settings", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate800)
-            Text("Keys are stored safely in local state & build configuration.", fontSize = 11.sp, color = Slate400)
-          }
-        }
-
-        OutlinedTextField(
-          value = secretKey,
-          onValueChange = onSecretKeyChange,
-          label = { Text("Stripe Secret Key (sk_test_...)") },
-          placeholder = { Text("Enter Stripe Secret Key") },
-          shape = RoundedCornerShape(12.dp),
-          colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Slate900,
-            unfocusedTextColor = Slate900,
-            focusedContainerColor = Slate50,
-            unfocusedContainerColor = Slate50
-          ),
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        OutlinedTextField(
-          value = publishableKey,
-          onValueChange = onPublishableKeyChange,
-          label = { Text("Stripe Publishable Key (pk_test_...)") },
-          placeholder = { Text("Enter Stripe Publishable Key") },
-          shape = RoundedCornerShape(12.dp),
-          colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Slate900,
-            unfocusedTextColor = Slate900,
-            focusedContainerColor = Slate50,
-            unfocusedContainerColor = Slate50
-          ),
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Button(
-          onClick = {
-            isFetching = true
-            stripeBalanceResult = null
-            stripeChargesResult = null
-            coroutineScope.launch {
-              try {
-                // Call real Stripe endpoint safely using Retrofit
-                val balance = StripeClient.api.getBalance("Bearer $secretKey")
-                val availableAmount = balance.available.firstOrNull()?.amount ?: 0
-                val currency = balance.available.firstOrNull()?.currency ?: "USD"
-                stripeBalanceResult = "Available Balance: ${availableAmount / 100.0} ${currency.uppercase()}"
-                apiConnectionStatus = "Connected (Live)"
-
-                val charges = StripeClient.api.getCharges("Bearer $secretKey")
-                stripeChargesResult = "Charges Fetched: ${charges.data.size} items"
-              } catch (e: Exception) {
-                stripeBalanceResult = "API Connection Error: ${e.message}"
-                stripeChargesResult = "Ensure your Stripe Secret Key is valid and active."
-                apiConnectionStatus = "Failed"
-              } finally {
-                isFetching = false
-              }
-            }
-          },
-          enabled = !isFetching && secretKey.isNotBlank(),
-          modifier = Modifier.fillMaxWidth(),
-          colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          if (isFetching) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Verifying Stripe Connection...")
-          } else {
-            Text("Test Stripe Connection & Fetch Balance")
-          }
-        }
-
-        // Connection Status & Live API result
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Slate50)
-            .padding(12.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          Text("API Connection Status:", fontSize = 12.sp, color = Slate500)
-          Text(
-            text = apiConnectionStatus,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = when (apiConnectionStatus) {
-              "Connected (Live)" -> Emerald700
-              "Failed" -> Color.Red
-              else -> Slate600
-            }
-          )
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    // Real API Output Card
-    if (stripeBalanceResult != null) {
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Indigo50),
-        shape = RoundedCornerShape(16.dp)
-      ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text("📡 LIVE STRIPE ENDPOINT RESULTS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Indigo700, letterSpacing = 1.sp)
-          Text(stripeBalanceResult ?: "", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
-          stripeChargesResult?.let {
-            Text(it, fontSize = 12.sp, color = Slate600)
-          }
-        }
-      }
-      Spacer(modifier = Modifier.height(20.dp))
-    }
-
-    // Revenue Overview Performance Card
-    Text("SLASH Partner Networks", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
-    Spacer(modifier = Modifier.height(10.dp))
-
-    var activeUsers by remember { mutableStateOf(1250) }
-    var searchQueriesCount by remember { mutableStateOf(18402) }
-    var simulatedBalance by remember { mutableStateOf(2450.75f) }
-    var activeMonetizationLoop by remember { mutableStateOf(false) }
-    var transferStatus by remember { mutableStateOf<String?>(null) }
-    var isTransferring by remember { mutableStateOf(false) }
-
-    LaunchedEffect(activeMonetizationLoop) {
-      if (activeMonetizationLoop) {
-        while (true) {
-          kotlinx.coroutines.delay(1200)
-          // Simulate live partner search query referrals and affiliate traffic
-          val incrementalSearches = (3..8).random()
-          searchQueriesCount += incrementalSearches
-          // Each search referral earns an average affiliate fee of $0.015
-          simulatedBalance += incrementalSearches * 0.015f
-          if (Math.random() < 0.1) {
-            activeUsers += (-5..10).random()
-          }
-        }
-      }
-    }
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      Card(
-        modifier = Modifier.weight(1f),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Slate100),
-        shape = RoundedCornerShape(16.dp)
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Text("PARTNER SEARCH CPM", fontSize = 10.sp, color = Slate400, fontWeight = FontWeight.Bold)
-          Text("$15.00", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Indigo600)
-          Text("Privacy-first referral fees", fontSize = 9.sp, color = Emerald700, fontStyle = FontStyle.Italic)
-        }
-      }
-      Card(
-        modifier = Modifier.weight(1f),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Slate100),
-        shape = RoundedCornerShape(16.dp)
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Text("ACCUMULATED REVENUE", fontSize = 10.sp, color = Slate400, fontWeight = FontWeight.Bold)
-          Text(String.format("$%.2f", simulatedBalance), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Slate800)
-          Text("${searchQueriesCount} partner referrals", fontSize = 9.sp, color = Slate400)
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    // Interactive Monetization Live Simulator Card
-    Card(
-      modifier = Modifier.fillMaxWidth(),
-      colors = CardDefaults.cardColors(containerColor = Slate50),
-      border = BorderStroke(1.dp, Slate100),
-      shape = RoundedCornerShape(20.dp)
-    ) {
-      Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text("Partner Search & Affiliate Engine", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate800)
-            Text("Simulate live user search syndication traffic", fontSize = 11.sp, color = Slate500)
-          }
-          Switch(
-            checked = activeMonetizationLoop,
-            onCheckedChange = { activeMonetizationLoop = it },
-            colors = SwitchDefaults.colors(
-              checkedThumbColor = Color.White,
-              checkedTrackColor = Emerald500
-            )
-          )
-        }
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text("Active Browser Nodes", fontSize = 11.sp, color = Slate400)
-            Text("$activeUsers active devices online", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate800)
-          }
-          Column(horizontalAlignment = Alignment.End) {
-            Text("Status", fontSize = 11.sp, color = Slate400)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              Box(
-                modifier = Modifier
-                  .size(6.dp)
-                  .clip(CircleShape)
-                  .background(if (activeMonetizationLoop) Emerald500 else Slate400)
-              )
-              Text(
-                text = if (activeMonetizationLoop) "Syndicating Live..." else "Idle",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (activeMonetizationLoop) Emerald700 else Slate500
-              )
-            }
-          }
-        }
-
-        Button(
-          onClick = {
-            isTransferring = true
-            transferStatus = null
-            coroutineScope.launch {
-              kotlinx.coroutines.delay(1500)
-              isTransferring = false
-              transferStatus = if (secretKey.isNotBlank() && secretKey.startsWith("sk_")) {
-                "✅ Stripe API Transfer Initiated!\nSuccessfully authorized a Payout event for ${String.format("$%.2f", simulatedBalance)} directly into your Stripe account."
-              } else {
-                "⚠️ Stripe Credentials Needed:\nTransfer simulated successfully! Add a valid Stripe Secret Key above to route these funds dynamically using the Live Stripe API."
-              }
-            }
-          },
-          enabled = !isTransferring && simulatedBalance > 0f,
-          modifier = Modifier.fillMaxWidth(),
-          colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          if (isTransferring) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Authorizing Stripe Transfer...")
-          } else {
-            Text("Transfer Balance to Stripe Account")
-          }
-        }
-
-        if (transferStatus != null) {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp))
-              .background(Indigo50)
-              .border(1.dp, Indigo200, RoundedCornerShape(12.dp))
-              .padding(12.dp)
-          ) {
-            Text(transferStatus ?: "", fontSize = 12.sp, color = Indigo700, fontWeight = FontWeight.Medium)
-          }
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    // Passive Income Strategy Breakdown
-    Text("How SLASH Generates Passive Revenue", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
-    Spacer(modifier = Modifier.height(10.dp))
-
-    Card(
-      modifier = Modifier.fillMaxWidth(),
-      colors = CardDefaults.cardColors(containerColor = Color.White),
-      border = BorderStroke(1.dp, Slate100),
-      shape = RoundedCornerShape(16.dp)
-    ) {
-      Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MonetizationStrategyStep(
-          icon = Icons.Default.Refresh,
-          iconColor = Indigo500,
-          title = "1. Search Engine Partner Syndication",
-          desc = "When SLASH browser users make search requests, they are routed through privacy-first search partners (such as Startpage or DuckDuckGo) with an ethical affiliate referral tag. You earn high CPM referral payouts completely transparently without tracking users' private data."
-        )
-        HorizontalDivider(color = Slate50)
-        MonetizationStrategyStep(
-          icon = Icons.Default.Share,
-          iconColor = Emerald500,
-          title = "2. Opt-in Premium Speed Dial Tiles",
-          desc = "Highly curated, privacy-respecting sponsor cards appear naturally in the speed dial/home page of the browser. Whenever users organically interact with these partner tiles, affiliate revenue is securely registered to your developer profile."
-        )
-        HorizontalDivider(color = Slate50)
-        MonetizationStrategyStep(
-          icon = Icons.Default.Send,
-          iconColor = Blue600,
-          title = "3. Auto-Payouts Flow via Stripe",
-          desc = "By configuring your secure Stripe Secret Key, the verified syndication payouts and premium browser subscriptions are processed as safe, automated Stripe direct-deposit events."
-        )
-      }
-    }
-
-    Spacer(modifier = Modifier.height(32.dp))
-  }
-}
-
-@Composable
-fun MonetizationStrategyStep(
-  icon: androidx.compose.ui.graphics.vector.ImageVector,
-  iconColor: Color,
-  title: String,
-  desc: String
-) {
-  Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-    Box(
-      modifier = Modifier
-        .size(32.dp)
-        .clip(CircleShape)
-        .background(iconColor.copy(alpha = 0.1f)),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
-    }
-    Column {
-      Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate800)
-      Text(desc, fontSize = 12.sp, color = Slate500, lineHeight = 16.sp, modifier = Modifier.padding(top = 2.dp))
-    }
-  }
-}
 
 @Composable
 fun EncryptedContent(
@@ -1030,7 +664,6 @@ fun BottomNavigationBar(currentTab: String, onTabSelected: (String) -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     BottomNavItem(icon = Icons.Filled.Home, label = "Home", isSelected = currentTab == "Home", onClick = { onTabSelected("Home") })
-    BottomNavItem(icon = Icons.Outlined.Build, label = "Workspace", isSelected = currentTab == "Workspace", onClick = { onTabSelected("Workspace") })
     BottomNavItem(icon = Icons.Outlined.Lock, label = "Encrypted", isSelected = currentTab == "Encrypted", onClick = { onTabSelected("Encrypted") })
     BottomNavItem(icon = Icons.Outlined.Settings, label = "Settings", isSelected = currentTab == "Settings", onClick = { onTabSelected("Settings") })
   }

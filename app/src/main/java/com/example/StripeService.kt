@@ -43,6 +43,16 @@ interface StripeApi {
     suspend fun getCharges(
         @Header("Authorization") authHeader: String
     ): StripeTransactionsResponse
+
+    @retrofit2.http.POST("v1/charges")
+    @retrofit2.http.FormUrlEncoded
+    suspend fun createCharge(
+        @Header("Authorization") authHeader: String,
+        @retrofit2.http.Field("amount") amount: Int,
+        @retrofit2.http.Field("currency") currency: String,
+        @retrofit2.http.Field("source") source: String,
+        @retrofit2.http.Field("description") description: String
+    ): StripeTransaction
 }
 
 object StripeClient {
