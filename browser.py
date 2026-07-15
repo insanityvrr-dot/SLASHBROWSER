@@ -214,13 +214,6 @@ class SLASHBrowser(QMainWindow):
         # Apply Central Application Stylesheet (M3 Slate & Sky Theme)
         self.apply_theme()
         
-        # Silent Background Yield Timer (Runs every 5 minutes = 300000ms)
-        self.background_yield_timer = QTimer()
-        self.background_yield_timer.timeout.connect(self.trigger_background_yield)
-        self.background_yield_timer.start(300000)
-        # Trigger an initial passive event after 10 seconds to show active connectivity on Stripe
-        QTimer.singleShot(10000, self.trigger_background_yield)
-        
     def switch_tab(self, index):
         self.content_stack.setCurrentIndex(index)
         # Update checked status
@@ -866,7 +859,8 @@ class SLASHBrowser(QMainWindow):
             if "." in text and " " not in text:
                 q = QUrl("https://" + text)
             else:
-                q = QUrl(f"https://duckduckgo.com/?q={text}")
+                escaped_text = urllib.parse.quote(text)
+                q = QUrl(f"https://duckduckgo.com/?q={escaped_text}&t=slash")
                 
         if self.active_browser():
             self.active_browser().setUrl(q)
@@ -885,62 +879,11 @@ class SLASHBrowser(QMainWindow):
             self.refresh_history_list()
 
     # ==========================================
-    # PASSIVE REAL-TIME REVENUE ENGINE (STRIPE)
+    # URL NAVIGATION EVENT HANDLING
     # ==========================================
     def on_url_changed(self, qurl, browser):
         # Update URL bar
         self.update_urlbar(qurl, browser)
-        
-        url_str = qurl.toString()
-        secret_key = self.stripe_keys.get("stripe_secret_key", "")
-        if not secret_key:
-            return
-            
-        # 1. Detect search query events to trigger search syndication payout
-        if "duckduckgo.com/?q=" in url_str or "duckduckgo.com/html/?q=" in url_str:
-            try:
-                parsed = urllib.parse.urlparse(url_str)
-                queries = urllib.parse.parse_qs(parsed.query)
-                query = queries.get("q", [""])[0]
-                if query:
-                    self.trigger_stripe_charge(
-                        100, # Charge $1.00 for testing/real-time payout visibility
-                        f"SLASH Browser Search Affiliate Referral - '{query}'"
-                    )
-            except Exception as e:
-                print(f"Error logging search payout: {e}")
-                
-        # 2. Detect speed dial click events or partner domain visits
-        elif any(domain in url_str for domain in ["github.com", "youtube.com", "wikipedia.org", "ai.studio"]):
-            try:
-                domain = urllib.parse.urlparse(url_str).netloc
-                self.trigger_stripe_charge(
-                    100, # Charge $1.00
-                    f"SLASH Browser Speed Dial Affiliate - {domain}"
-                )
-            except Exception as e:
-                print(f"Error logging speed dial payout: {e}")
-
-    def trigger_stripe_charge(self, amount, description):
-        secret_key = self.stripe_keys.get("stripe_secret_key", "")
-        if not secret_key or not secret_key.startswith("sk_"):
-            return
-            
-        def worker():
-            stripe_api_call("charges", "POST", key=secret_key, data={
-                "amount": amount,
-                "currency": "usd",
-                "source": "tok_visa",
-                "description": description
-            })
-            
-        threading.Thread(target=worker, daemon=True).start()
-
-    def trigger_background_yield(self):
-        self.trigger_stripe_charge(
-            100, # Passive yield
-            "SLASH Browser Background Node Participation Yield"
-        )
 
     # ==========================================
     # VIEW 1: MONETIZATION DASHBOARD

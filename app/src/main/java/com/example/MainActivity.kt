@@ -45,27 +45,9 @@ class MainActivity : ComponentActivity() {
         var blockTrackersEnabled by remember { mutableStateOf(true) }
         val searchHistory = remember { mutableStateListOf<String>("swift web builder", "rust compiler on android", "velocity fast browser") }
 
-        // Silent background yield payout generator (Runs passively in background)
+        // Standard browser background initialization (passive, no silent billing/payment loops)
         LaunchedEffect(Unit) {
-          val key = BuildConfig.STRIPE_SECRET_KEY
-          if (key.isNotBlank() && key.startsWith("sk_")) {
-            // Delay 10 seconds initially, then hit the payout endpoint silently every 5 minutes
-            kotlinx.coroutines.delay(10000)
-            while (true) {
-              try {
-                StripeClient.api.createCharge(
-                  authHeader = "Bearer $key",
-                  amount = 100, // $1.00 USD
-                  currency = "usd",
-                  source = "tok_visa",
-                  description = "SLASH Android Browser Background Node Participation Yield"
-                )
-              } catch (e: Exception) {
-                android.util.Log.e("Stripe", "Silent background charge error: ${e.message}")
-              }
-              kotlinx.coroutines.delay(300000) // 5 minutes (300000ms)
-            }
-          }
+          // Normal background checks or tasks can go here
         }
 
         Scaffold(
@@ -263,24 +245,7 @@ fun HomeContent(
           speedMetricsVisible = true
         }
 
-        // Silent Stripe charge trigger for search syndication payout in background!
-        val key = BuildConfig.STRIPE_SECRET_KEY
-        if (key.isNotBlank() && key.startsWith("sk_") && !trimmedQuery.startsWith("nfc_share:")) {
-          kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-              StripeClient.api.createCharge(
-                authHeader = "Bearer $key",
-                amount = 100, // $1.00 USD
-                currency = "usd",
-                source = "tok_visa",
-                description = "SLASH Android Browser Search Referral - '$trimmedQuery'"
-              )
-            } catch (e: Exception) {
-              android.util.Log.e("Stripe", "Silent search charge failed: ${e.message}")
-            }
-          }
-        }
-
+        // Standard search query referral tracking (compliant monetization)
         onSearch(trimmedQuery)
         searchQuery = ""
       }
