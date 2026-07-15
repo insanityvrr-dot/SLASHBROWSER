@@ -958,16 +958,16 @@ fun SettingsContent() {
           Text("# Copy and paste this terminal installer code:", fontSize = 11.sp, color = Slate400, fontStyle = FontStyle.Italic)
           Spacer(modifier = Modifier.height(8.dp))
           Text(
-            text = "# 1. Clone SLASHBROWSER repository\n" +
-                "git clone https://github.com/insanityvrr-dot/SLASHBROWSER.git\n" +
+            text = "# 1. Clone the repository\n" +
+                "git clone https://github.com/insanityvrr-dot/SLASHBROWSER.git\n\n" +
+                "# 2. Enter the directory\n" +
                 "cd SLASHBROWSER\n\n" +
-                "# 2. Run the simple Linux installer\n" +
-                "chmod +x install.sh\n" +
-                "./install.sh",
+                "# 3. Run the installer\n" +
+                "chmod +x install.sh && ./install.sh",
             fontSize = 13.sp,
             color = Color.Green,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            lineHeight = 18.sp
+            lineHeight = 16.sp
           )
         }
 
