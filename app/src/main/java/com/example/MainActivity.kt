@@ -109,9 +109,9 @@ fun Header() {
           .background(Indigo600),
         contentAlignment = Alignment.Center
       ) {
-        Text("V", color = Color.White, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
+        Text("S", color = Color.White, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
       }
-      Text("Velocity", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Slate900, letterSpacing = (-0.5).sp)
+      Text("SLASH", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Slate900, letterSpacing = (-0.5).sp)
     }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -155,7 +155,7 @@ fun HomeContent(
     // Hero Text
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Velocity", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Slate900)
+        Text("SLASH", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Slate900)
         Text(" Engine", fontSize = 32.sp, fontWeight = FontWeight.Light, color = Indigo500)
       }
       Text("Instantaneous page loads. Zero data collection.", fontSize = 14.sp, color = Slate500)
@@ -556,7 +556,7 @@ fun WorkspaceContent(
     }
 
     // Revenue Overview Performance Card
-    Text("Velocity Partner Networks", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
+    Text("SLASH Partner Networks", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
     Spacer(modifier = Modifier.height(10.dp))
 
     var activeUsers by remember { mutableStateOf(1250) }
@@ -712,7 +712,7 @@ fun WorkspaceContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     // Passive Income Strategy Breakdown
-    Text("How Velocity Generates Passive Revenue", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
+    Text("How SLASH Generates Passive Revenue", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
     Spacer(modifier = Modifier.height(10.dp))
 
     Card(
@@ -726,7 +726,7 @@ fun WorkspaceContent(
           icon = Icons.Default.Refresh,
           iconColor = Indigo500,
           title = "1. Search Engine Partner Syndication",
-          desc = "When Velocity browser users make search requests, they are routed through privacy-first search partners (such as Startpage or DuckDuckGo) with an ethical affiliate referral tag. You earn high CPM referral payouts completely transparently without tracking users' private data."
+          desc = "When SLASH browser users make search requests, they are routed through privacy-first search partners (such as Startpage or DuckDuckGo) with an ethical affiliate referral tag. You earn high CPM referral payouts completely transparently without tracking users' private data."
         )
         HorizontalDivider(color = Slate50)
         MonetizationStrategyStep(
@@ -918,7 +918,7 @@ fun SettingsContent() {
     horizontalAlignment = Alignment.Start
   ) {
     Spacer(modifier = Modifier.height(16.dp))
-    Text("Velocity Installer Support", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Slate900)
+    Text("SLASH Linux & Desktop Support", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Slate900)
     Text("Build, install, or run the desktop and mobile clients autonomously.", fontSize = 14.sp, color = Slate500)
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -958,15 +958,21 @@ fun SettingsContent() {
           Text("# Copy and paste this terminal installer code:", fontSize = 11.sp, color = Slate400, fontStyle = FontStyle.Italic)
           Spacer(modifier = Modifier.height(8.dp))
           Text(
-            text = "curl -sS https://raw.githubusercontent.com/velocity/install/main/bootstrap.sh | bash",
-            fontSize = 12.sp,
+            text = "# 1. Clone SLASHBROWSER repository\n" +
+                "git clone https://github.com/insanityvrr-dot/SLASHBROWSER.git\n" +
+                "cd SLASHBROWSER\n\n" +
+                "# 2. Run the simple Linux installer\n" +
+                "chmod +x install.sh\n" +
+                "./install.sh",
+            fontSize = 13.sp,
             color = Color.Green,
-            fontWeight = FontWeight.SemiBold
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            lineHeight = 18.sp
           )
         }
 
         Text(
-          text = "The bootstrap installer securely checks your operating system environment, provisions proper environment SDK targets, clones the Velocity repository, and builds the optimal target locally.",
+          text = "The installation script securely provisions SDK build targets, compiles the SLASH browser client, designs the sky-blue adaptive icon, and registers a local Linux desktop shortcut automatically.",
           fontSize = 12.sp,
           color = Slate600,
           lineHeight = 16.sp

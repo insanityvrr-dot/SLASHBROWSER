@@ -1,5 +1,5 @@
 {
-  "name": "Velocity",
+  "name": "SLASH",
   "description": "Secure, localized, AI-powered browser.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Velocity"
+rootProject.name = "SLASH"
 
 include(":app")
