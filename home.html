@@ -954,12 +954,6 @@
                         seenArticles.add(articleId);
                         observer.unobserve(card);
                         
-                        // Show visual pop-up to user
-                        const popup = document.createElement('div');
-                        popup.className = 'revenue-popup';
-                        popup.textContent = '+$0.015';
-                        card.appendChild(popup);
-                        
                         // Notify SLASH Browser Python backend of scrolled/seen event
                         triggerRevenueForArticle(articleId);
                     }
