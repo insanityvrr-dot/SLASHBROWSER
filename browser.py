@@ -117,6 +117,7 @@ def stripe_api_call(endpoint, method="GET", key=None, data=None):
 class WorkerSignals(QObject):
     stripe_result = pyqtSignal(bool, str, str) # success, balance_text, charges_text
     transfer_result = pyqtSignal(bool, str)     # success, message
+    sync_completed = pyqtSignal(float, int)     # balance, referrals
 
 class SLASHBrowser(QMainWindow):
     def __init__(self):
@@ -130,6 +131,7 @@ class SLASHBrowser(QMainWindow):
         self.signals = WorkerSignals()
         self.signals.stripe_result.connect(self.on_stripe_tested)
         self.signals.transfer_result.connect(self.on_transfer_completed)
+        self.signals.sync_completed.connect(self.on_sync_completed)
         
         # Initialize simulated revenue and telemetry metrics persistently
         self.simulated_balance = float(self.config.get("simulated_balance", 0.0))
@@ -140,6 +142,14 @@ class SLASHBrowser(QMainWindow):
         
         self.config["session_count"] = self.session_count
         save_config(self.config)
+        
+        # Setup polling timer for global revenue synchronization
+        self.global_sync_timer = QTimer(self)
+        self.global_sync_timer.timeout.connect(lambda: self.sync_global_revenue())
+        self.global_sync_timer.start(15000) # Every 15 seconds
+        
+        # Trigger initial global revenue sync
+        QTimer.singleShot(1000, lambda: self.sync_global_revenue())
         
 
         # Override Chromium's User Agent globally to prevent "Access Denied", "This browser or app may not be secure", or "disallowed_useragent" on Google logins.
@@ -1009,6 +1019,9 @@ class SLASHBrowser(QMainWindow):
                         self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
                     self.status_bar.showMessage(f"Passive Revenue Credited: +$0.015 (Preview seen)", 4000)
                     
+                    # Sync with global CounterAPI
+                    self.sync_global_revenue(increment_by=1)
+                    
         # 2. Click or search partner referral (t=slash)
         elif "t=slash" in url_str:
             if not hasattr(self, "_processed_click_urls"):
@@ -1032,6 +1045,9 @@ class SLASHBrowser(QMainWindow):
                 if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
                     self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
                 self.status_bar.showMessage(f"Affiliate Click Credited: +$0.015 (Partner Referral)", 4000)
+                
+                # Sync with global CounterAPI
+                self.sync_global_revenue(increment_by=1)
 
     # ==========================================
     # VIEW 1: MONETIZATION DASHBOARD
@@ -1392,6 +1408,80 @@ class SLASHBrowser(QMainWindow):
             self.lbl_stripe_status.setStyleSheet("font-size: 12px; color: #EF4444; font-weight: bold;")
             self.lbl_stripe_details.setText("Ensure your Stripe Secret Key starts with sk_test_ or sk_live_ and is valid.")
 
+    def sync_global_revenue(self, increment_by=0):
+        def worker():
+            try:
+                import urllib.request
+                import json
+                
+                # 1. Handle increments if requested
+                if increment_by == 1:
+                    url = "https://api.counterapi.dev/v1/slash_browser_rev_insanityvrr/referrals/up"
+                    req = urllib.request.Request(url, headers={"User-Agent": "SLASH-Browser/1.0"})
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        res_data = json.loads(response.read().decode("utf-8"))
+                        new_count = res_data.get("count", self.partner_referrals)
+                elif increment_by > 1:
+                    # Incrementing the counter by the specified delta
+                    # First fetch the latest count
+                    url = "https://api.counterapi.dev/v1/slash_browser_rev_insanityvrr/referrals/"
+                    req = urllib.request.Request(url, headers={"User-Agent": "SLASH-Browser/1.0"})
+                    current_count = self.partner_referrals
+                    try:
+                        with urllib.request.urlopen(req, timeout=5) as response:
+                            res_data = json.loads(response.read().decode("utf-8"))
+                            current_count = res_data.get("count", self.partner_referrals)
+                    except Exception as ex:
+                        if "400" in str(ex) or "not found" in str(ex).lower():
+                            pass
+                    
+                    target_count = current_count + increment_by
+                    url_set = f"https://api.counterapi.dev/v1/slash_browser_rev_insanityvrr/referrals/set?count={target_count}"
+                    req_set = urllib.request.Request(url_set, headers={"User-Agent": "SLASH-Browser/1.0"})
+                    with urllib.request.urlopen(req_set, timeout=5) as response:
+                        res_data = json.loads(response.read().decode("utf-8"))
+                        new_count = res_data.get("count", target_count)
+                else:
+                    # Just fetch current global count
+                    url = "https://api.counterapi.dev/v1/slash_browser_rev_insanityvrr/referrals/"
+                    req = urllib.request.Request(url, headers={"User-Agent": "SLASH-Browser/1.0"})
+                    try:
+                        with urllib.request.urlopen(req, timeout=5) as response:
+                            res_data = json.loads(response.read().decode("utf-8"))
+                            new_count = res_data.get("count", self.partner_referrals)
+                    except Exception as ex:
+                        if "400" in str(ex) or "not found" in str(ex).lower():
+                            # Record not found, seed with local
+                            url_set = f"https://api.counterapi.dev/v1/slash_browser_rev_insanityvrr/referrals/set?count={self.partner_referrals}"
+                            req_set = urllib.request.Request(url_set, headers={"User-Agent": "SLASH-Browser/1.0"})
+                            with urllib.request.urlopen(req_set, timeout=5) as response2:
+                                res_data2 = json.loads(response2.read().decode("utf-8"))
+                                new_count = res_data2.get("count", self.partner_referrals)
+                        else:
+                            raise ex
+                
+                # 2. Update local state and UI
+                self.signals.sync_completed.emit(new_count * 0.015, new_count)
+            except Exception as e:
+                print(f"Error syncing global revenue: {e}")
+                
+        threading.Thread(target=worker, daemon=True).start()
+
+    def on_sync_completed(self, balance, referrals):
+        self.simulated_balance = balance
+        self.partner_referrals = referrals
+        self.config["simulated_balance"] = balance
+        self.config["partner_referrals"] = referrals
+        save_config(self.config)
+        
+        # Update UI elements
+        if hasattr(self, "lbl_accumulated_revenue") and self.lbl_accumulated_revenue:
+            self.lbl_accumulated_revenue.setText(f"${balance:.2f}")
+        if hasattr(self, "lbl_partner_referrals") and self.lbl_partner_referrals:
+            self.lbl_partner_referrals.setText(f"{referrals} partner referrals")
+        if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
+            self.lbl_partner_referrals_stats.setText(f"{referrals} queries/clicks")
+
     def toggle_affiliate_simulation(self):
         if self.btn_toggle_sim.isChecked():
             self.btn_toggle_sim.setText("Toggle Passive Node (ON)")
@@ -1420,6 +1510,9 @@ class SLASHBrowser(QMainWindow):
         if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
             self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
         self.lbl_active_devices.setText(f"Active Nodes: {self.active_devices} online devices")
+        
+        # Sync incremental updates to CounterAPI
+        self.sync_global_revenue(increment_by=incremental)
 
     def initiate_stripe_transfer(self):
         secret_key = self.stripe_keys.get("stripe_secret_key", "")
