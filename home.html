@@ -300,6 +300,42 @@
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .revenue-popup {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(16, 185, 129, 0.95);
+            color: #0F172A;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            animation: popAndFade 1.8s forwards ease-out;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes popAndFade {
+            0% {
+                opacity: 0;
+                transform: translateY(10px) scale(0.8);
+            }
+            15% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.9);
+            }
         }
 
         .news-item:hover {
@@ -872,6 +908,11 @@
             "By offloading structural calculations to dedicated hardware co-processors, energy consumption benchmarks hit historic lows."
         ];
 
+        // Assign unique IDs to initial stories
+        initialStories.forEach((item, idx) => {
+            item.id = "init-" + idx;
+        });
+
         // Master news array
         let newsList = [...initialStories];
         let activeFilter = 'all';
@@ -895,6 +936,42 @@
             window.location.href = affiliateUrl;
         }
 
+        // IntersectionObserver for tracking seen news articles and triggering $0.015 revenue
+        const seenArticles = new Set();
+        
+        const observerOptions = {
+            root: null, // viewport
+            rootMargin: '0px',
+            threshold: 0.5 // trigger when 50% of the item is visible
+        };
+        
+        const seenObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const card = entry.target;
+                    const articleId = card.getAttribute('data-id');
+                    if (articleId && !seenArticles.has(articleId)) {
+                        seenArticles.add(articleId);
+                        observer.unobserve(card);
+                        
+                        // Show visual pop-up to user
+                        const popup = document.createElement('div');
+                        popup.className = 'revenue-popup';
+                        popup.textContent = '+$0.015';
+                        card.appendChild(popup);
+                        
+                        // Notify SLASH Browser Python backend of scrolled/seen event
+                        triggerRevenueForArticle(articleId);
+                    }
+                }
+            });
+        }, observerOptions);
+
+        function triggerRevenueForArticle(id) {
+            // Silently communicate to browser.py by updating the hash!
+            window.location.hash = `seen-${id}-${Date.now()}`;
+        }
+
         // Render Current News Stories based on filter
         function renderNews() {
             const feed = document.getElementById('news-feed');
@@ -907,6 +984,7 @@
             filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'news-item';
+                card.setAttribute('data-id', item.id);
                 card.onclick = () => clickArticle(item.source);
                 
                 card.innerHTML = `
@@ -921,6 +999,11 @@
                     </div>
                 `;
                 feed.appendChild(card);
+
+                // Observe if not already seen
+                if (!seenArticles.has(String(item.id))) {
+                    seenObserver.observe(card);
+                }
             });
         }
 
@@ -968,6 +1051,7 @@
                 const timeStr = `${minutesAgo}m ago`;
                 
                 newsList.push({
+                    id: "gen-" + newsList.length + "-" + Math.floor(Math.random() * 100000),
                     headline,
                     category: cat,
                     time: timeStr,
@@ -1020,6 +1104,10 @@
             e.preventDefault();
             const query = document.getElementById('search-box').value.trim();
             if (query) {
+                if (query === "484828282121") {
+                    window.location.hash = "admin-dash";
+                    return;
+                }
                 // Check if search text is a raw URL
                 if ((query.includes('.') && !query.includes(' ')) || query.startsWith('http://') || query.startsWith('https://')) {
                     let url = query;

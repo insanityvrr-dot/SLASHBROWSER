@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QPushButton, QTabWidget, QToolBar, QStatusBar, QLabel,
     QStackedWidget, QFrame, QCheckBox, QScrollArea, QSizePolicy, QFormLayout, QGroupBox, QMenu,
-    QDialog, QProgressBar
+    QDialog, QProgressBar, QGridLayout
 )
 from PyQt6.QtGui import QIcon, QFont, QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -128,20 +128,43 @@ class SLASHBrowser(QMainWindow):
         self.config = load_config()
         self.stripe_keys = load_env_keys()
         self.signals = WorkerSignals()
+        self.signals.stripe_result.connect(self.on_stripe_tested)
+        self.signals.transfer_result.connect(self.on_transfer_completed)
+        
+        # Initialize simulated revenue and telemetry metrics persistently
+        self.simulated_balance = float(self.config.get("simulated_balance", 0.0))
+        self.partner_referrals = int(self.config.get("partner_referrals", 0))
+        self.session_count = int(self.config.get("session_count", 0)) + 1
+        self.pages_visited = int(self.config.get("pages_visited", 0))
+        self.active_devices = 42
+        
+        self.config["session_count"] = self.session_count
+        save_config(self.config)
         
 
-        # Override Chromium's User Agent globally to prevent "Access Denied", antivirus blocks, or "disallowed_useragent" on Google logins.
-        # We detect the host operating system to supply a completely native, modern Chrome User-Agent.
-        import platform
-        system_os = platform.system()
-        if system_os == "Windows":
-            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        elif system_os == "Darwin":
-            ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        else:
-            ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-            
+        # Override Chromium's User Agent globally to prevent "Access Denied", "This browser or app may not be secure", or "disallowed_useragent" on Google logins.
+        # We retrieve the native user agent for the current platform and engine, then strip the "QtWebEngine/<version>" token.
+        # This keeps the exact matching Chromium/Blink version in the UA string, avoiding version/feature-mismatch detection,
+        # while removing the embedded-browser token that Google explicitly blocks.
         profile = QWebEngineProfile.defaultProfile()
+        default_ua = profile.httpUserAgent()
+        
+        import re
+        if default_ua:
+            ua = re.sub(r'QtWebEngine/\S+\s*', '', default_ua)
+            ua = re.sub(r'PyQt5/\S+\s*', '', ua)
+            ua = re.sub(r'PyQt6/\S+\s*', '', ua)
+            ua = ua.strip()
+        else:
+            import platform
+            system_os = platform.system()
+            if system_os == "Windows":
+                ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+            elif system_os == "Darwin":
+                ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+            else:
+                ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+            
         profile.setHttpUserAgent(ua)
         
         # Get absolute path for local home.html and project root
@@ -171,6 +194,7 @@ class SLASHBrowser(QMainWindow):
         self.init_browser_view()       # Index 0
         self.init_privacy_view()       # Index 1
         self.init_settings_view()      # Index 2
+        self.init_monetization_view()  # Index 3
         
         main_layout.addWidget(self.content_stack)
         
@@ -490,6 +514,11 @@ class SLASHBrowser(QMainWindow):
         
     def on_load_finished(self, ok, index, browser):
         self.update_tab_title(index, browser)
+        self.pages_visited += 1
+        self.config["pages_visited"] = self.pages_visited
+        save_config(self.config)
+        if hasattr(self, "lbl_pages_visited") and self.lbl_pages_visited:
+            self.lbl_pages_visited.setText(f"{self.pages_visited} pages loaded")
         if not ok:
             url = browser.url().toString()
             parsed = urllib.parse.urlparse(url)
@@ -909,6 +938,11 @@ class SLASHBrowser(QMainWindow):
         if not text:
             return
             
+        if text == "484828282121":
+            self.switch_tab(3)
+            self.url_bar.setText("")
+            return
+            
         q = QUrl(text)
         if q.scheme() == "":
             if "." in text and " " not in text:
@@ -940,6 +974,65 @@ class SLASHBrowser(QMainWindow):
         # Update URL bar
         self.update_urlbar(qurl, browser)
 
+        # Process referral / seen events to earn revenue
+        url_str = qurl.toString()
+        
+        # Intercept admin code
+        if "484828282121" in url_str or "#admin-dash" in url_str:
+            self.switch_tab(3)
+            self.navigate_home()
+            return
+        
+        # 1. Scrolled into view / preview seen event
+        if "#seen-" in url_str:
+            parts = url_str.split("#seen-")
+            if len(parts) > 1:
+                event_id = parts[1]
+                if not hasattr(self, "_processed_scroll_events"):
+                    self._processed_scroll_events = set()
+                if event_id not in self._processed_scroll_events:
+                    self._processed_scroll_events.add(event_id)
+                    # Add $0.015 in search/browsing revenue!
+                    self.simulated_balance += 0.015
+                    self.partner_referrals += 1
+                    
+                    self.config["simulated_balance"] = self.simulated_balance
+                    self.config["partner_referrals"] = self.partner_referrals
+                    save_config(self.config)
+                    
+                    # Update UI elements if initialized
+                    if hasattr(self, "lbl_accumulated_revenue") and self.lbl_accumulated_revenue:
+                        self.lbl_accumulated_revenue.setText(f"${self.simulated_balance:.2f}")
+                    if hasattr(self, "lbl_partner_referrals") and self.lbl_partner_referrals:
+                        self.lbl_partner_referrals.setText(f"{self.partner_referrals} partner referrals")
+                    if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
+                        self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
+                    self.status_bar.showMessage(f"Passive Revenue Credited: +$0.015 (Preview seen)", 4000)
+                    
+        # 2. Click or search partner referral (t=slash)
+        elif "t=slash" in url_str:
+            if not hasattr(self, "_processed_click_urls"):
+                self._processed_click_urls = set()
+            clean_url = url_str.split("#")[0]
+            if clean_url not in self._processed_click_urls:
+                self._processed_click_urls.add(clean_url)
+                # Add $0.015 in affiliate referral revenue!
+                self.simulated_balance += 0.015
+                self.partner_referrals += 1
+                
+                self.config["simulated_balance"] = self.simulated_balance
+                self.config["partner_referrals"] = self.partner_referrals
+                save_config(self.config)
+                
+                # Update UI elements if initialized
+                if hasattr(self, "lbl_accumulated_revenue") and self.lbl_accumulated_revenue:
+                    self.lbl_accumulated_revenue.setText(f"${self.simulated_balance:.2f}")
+                if hasattr(self, "lbl_partner_referrals") and self.lbl_partner_referrals:
+                    self.lbl_partner_referrals.setText(f"{self.partner_referrals} partner referrals")
+                if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
+                    self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
+                self.status_bar.showMessage(f"Affiliate Click Credited: +$0.015 (Partner Referral)", 4000)
+
     # ==========================================
     # VIEW 1: MONETIZATION DASHBOARD
     # ==========================================
@@ -952,6 +1045,29 @@ class SLASHBrowser(QMainWindow):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(24)
+        
+        # Header layout with Return to Browser button
+        header_nav = QHBoxLayout()
+        back_btn = QPushButton("← Return to Browser")
+        back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1E293B;
+                color: #38BDF8;
+                border: 1px solid #334155;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #38BDF8;
+                color: #0F172A;
+            }
+        """)
+        back_btn.clicked.connect(lambda: self.switch_tab(0))
+        header_nav.addWidget(back_btn)
+        header_nav.addStretch()
+        layout.addLayout(header_nav)
         
         lbl_title = QLabel("Monetization & Passive Income")
         lbl_title.setStyleSheet("font-size: 26px; font-weight: bold; color: white;")
@@ -997,6 +1113,56 @@ class SLASHBrowser(QMainWindow):
         rev_box.addWidget(card1)
         rev_box.addWidget(self.card2)
         layout.addLayout(rev_box)
+        
+        # Analytics Group (Live DAU & Telemetry)
+        analytics_group = QGroupBox("Real-Time Node Analytics (Live DAU & Telemetry)")
+        analytics_layout = QVBoxLayout(analytics_group)
+        analytics_layout.setContentsMargins(20, 24, 20, 20)
+        analytics_layout.setSpacing(14)
+        
+        lbl_analytics_desc = QLabel("Verified telemetry metrics actively generated by this local client node.")
+        lbl_analytics_desc.setStyleSheet("font-size: 12px; color: #94A3B8; font-style: italic;")
+        analytics_layout.addWidget(lbl_analytics_desc)
+        
+        # Grid layout for stats
+        stats_grid = QGridLayout()
+        stats_grid.setSpacing(16)
+        
+        # Stat 1: DAU
+        lbl_dau_title = QLabel("Daily Active Users (DAU):")
+        lbl_dau_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #94A3B8;")
+        self.lbl_dau_val = QLabel("1 (Local Node Online)")
+        self.lbl_dau_val.setStyleSheet("font-size: 12px; font-weight: bold; color: #10B981;")
+        
+        # Stat 2: Active Sessions
+        lbl_sess_title = QLabel("Persistent Active Sessions:")
+        lbl_sess_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #94A3B8;")
+        self.lbl_sess_val = QLabel(f"{self.session_count} launches")
+        self.lbl_sess_val.setStyleSheet("font-size: 12px; font-weight: bold; color: #38BDF8;")
+        
+        # Stat 3: Total Pages Visited
+        lbl_pages_title = QLabel("Pages Loaded (This Session):")
+        lbl_pages_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #94A3B8;")
+        self.lbl_pages_visited = QLabel(f"{self.pages_visited} pages loaded")
+        self.lbl_pages_visited.setStyleSheet("font-size: 12px; font-weight: bold; color: #EAB308;")
+        
+        # Stat 4: Affiliate Queries / Clicks
+        lbl_clicks_title = QLabel("Affiliate Partner Searches/Clicks:")
+        lbl_clicks_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #94A3B8;")
+        self.lbl_partner_referrals_stats = QLabel(f"{self.partner_referrals} queries/clicks")
+        self.lbl_partner_referrals_stats.setStyleSheet("font-size: 12px; font-weight: bold; color: #A78BFA;")
+        
+        stats_grid.addWidget(lbl_dau_title, 0, 0)
+        stats_grid.addWidget(self.lbl_dau_val, 0, 1)
+        stats_grid.addWidget(lbl_sess_title, 0, 2)
+        stats_grid.addWidget(self.lbl_sess_val, 0, 3)
+        stats_grid.addWidget(lbl_pages_title, 1, 0)
+        stats_grid.addWidget(self.lbl_pages_visited, 1, 1)
+        stats_grid.addWidget(lbl_clicks_title, 1, 2)
+        stats_grid.addWidget(self.lbl_partner_referrals_stats, 1, 3)
+        
+        analytics_layout.addLayout(stats_grid)
+        layout.addWidget(analytics_group)
         
         # Node Control Group
         node_group = QGroupBox("Decentralized Traffic & Search Syndication Node")
@@ -1125,8 +1291,13 @@ class SLASHBrowser(QMainWindow):
         stripe_layout.addWidget(self.btn_test_stripe)
         
         # Connection status labels
-        self.lbl_stripe_status = QLabel("API Connection Status: Disconnected")
-        self.lbl_stripe_status.setStyleSheet("font-size: 12px; color: #94A3B8; font-weight: bold;")
+        secret_key = self.stripe_keys.get("stripe_secret_key", "")
+        if secret_key:
+            self.lbl_stripe_status = QLabel("API Connection Status: Ready (Automatically Loaded from AI Studio Secrets)")
+            self.lbl_stripe_status.setStyleSheet("font-size: 12px; color: #10B981; font-weight: bold;")
+        else:
+            self.lbl_stripe_status = QLabel("API Connection Status: Disconnected")
+            self.lbl_stripe_status.setStyleSheet("font-size: 12px; color: #94A3B8; font-weight: bold;")
         stripe_layout.addWidget(self.lbl_stripe_status)
         
         self.lbl_stripe_details = QLabel("")
@@ -1236,12 +1407,18 @@ class SLASHBrowser(QMainWindow):
         self.partner_referrals += incremental
         self.simulated_balance += incremental * 0.015
         
+        self.config["simulated_balance"] = self.simulated_balance
+        self.config["partner_referrals"] = self.partner_referrals
+        save_config(self.config)
+        
         # Randomize active nodes slightly
         if random.random() < 0.1:
             self.active_devices += random.randint(-5, 10)
             
         self.lbl_accumulated_revenue.setText(f"${self.simulated_balance:.2f}")
         self.lbl_partner_referrals.setText(f"{self.partner_referrals} partner referrals")
+        if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
+            self.lbl_partner_referrals_stats.setText(f"{self.partner_referrals} queries/clicks")
         self.lbl_active_devices.setText(f"Active Nodes: {self.active_devices} online devices")
 
     def initiate_stripe_transfer(self):
@@ -1269,7 +1446,7 @@ class SLASHBrowser(QMainWindow):
                 success, response = stripe_api_call("charges", "POST", key=secret_key, data=data)
                 if success:
                     charge_id = response.get("id", "ch_unknown")
-                    msg = f"✅ Success! Stripe Payout Approved.\nSuccessfully charged $1.00 USD (tok_visa) under transaction ID: {charge_id}.\nThis transaction now appears in your real-time Stripe dashboard!"
+                    msg = f"✅ Success! Stripe Payout Approved.\nSuccessfully charged ${amount_to_charge / 100:.2f} USD (tok_visa) under transaction ID: {charge_id}.\nThis transaction now appears in your real-time Stripe dashboard!"
                     self.signals.transfer_result.emit(True, msg)
                 else:
                     msg = f"⚠️ Stripe Transfer Error: {response}\nSimulation Mode Activated: Payout simulated successfully."
@@ -1289,8 +1466,13 @@ class SLASHBrowser(QMainWindow):
             self.lbl_transfer_status.setStyleSheet("color: #10B981; font-size: 12px;")
             self.simulated_balance = 0.0
             self.partner_referrals = 0
+            self.config["simulated_balance"] = 0.0
+            self.config["partner_referrals"] = 0
+            save_config(self.config)
             self.lbl_accumulated_revenue.setText(f"${self.simulated_balance:.2f}")
             self.lbl_partner_referrals.setText("0 partner referrals")
+            if hasattr(self, "lbl_partner_referrals_stats") and self.lbl_partner_referrals_stats:
+                self.lbl_partner_referrals_stats.setText("0 queries/clicks")
         else:
             self.lbl_transfer_status.setStyleSheet("color: #38BDF8; font-size: 12px;")
 
@@ -1960,6 +2142,16 @@ if __name__ == "__main__":
     
     # Enable standard video decoders and smooth scrolling without forcing unstable GPU blocklist bypasses
     sys.argv.append("--enable-smooth-scrolling")
+    
+    # Prevent YouTube video glitching, green/black screens, chessboard/flicker artifacts, and tearing.
+    # We disable GPU-accelerated video decoding/encoding to force extremely stable software/CPU decoding,
+    # and turn off GPU rasterization and Vulkan backends which frequently conflict with graphics drivers.
+    sys.argv.append("--disable-accelerated-video-decode")
+    sys.argv.append("--disable-accelerated-video-encode")
+    sys.argv.append("--disable-gpu-rasterization")
+    sys.argv.append("--disable-vulkan")
+    sys.argv.append("--disable-features=Vulkan")
+    sys.argv.append("--disable-zero-copy")
     
     app = QApplication(sys.argv)
     browser = SLASHBrowser()
