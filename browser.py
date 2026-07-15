@@ -127,7 +127,10 @@ class SLASHBrowser(QMainWindow):
         profile.setHttpUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
         
         # Get absolute path for local home.html
-        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, 'frozen', False):
+            self.current_dir = sys._MEIPASS
+        else:
+            self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.home_html_path = os.path.join(self.current_dir, "home.html")
         
         # Set window icon to our generated icon if it exists
