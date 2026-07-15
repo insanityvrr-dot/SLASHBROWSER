@@ -1862,7 +1862,9 @@ echo Waiting for SLASH to close...
 timeout /t 2 /nobreak >nul
 echo.
 echo Pulling latest improvements from git...
+git stash
 git pull
+git stash pop
 echo.
 echo Rebuilding Windows executable with PyInstaller...
 call build_windows.bat
@@ -1882,7 +1884,9 @@ echo Waiting for SLASH to close...
 timeout /t 2 /nobreak >nul
 echo.
 echo Pulling latest improvements from git...
+git stash
 git pull
+git stash pop
 echo.
 echo Launching updated SLASH Browser...
 start "" "win_venv\\Scripts\\python.exe" "browser.py"
@@ -1909,7 +1913,9 @@ echo "  🔄 SLASH Auto-Updater: Applying Improvements"
 echo "==================================================="
 sleep 2
 echo "Pulling latest improvements from git..."
+git stash
 git pull
+git stash pop || true
 echo "Launching updated SLASH Browser..."
 if [ -f "./slashbrowser" ]; then
     ./slashbrowser &
