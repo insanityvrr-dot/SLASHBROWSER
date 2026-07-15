@@ -8,11 +8,37 @@ echo.
 :: 1. Check for Python installation
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ Error: Python is required but not found in your Windows PATH.
-    echo Please download and install Python 3.10+ from https://www.python.org/
-    echo Make sure to check the option "Add Python to PATH" during installation.
-    pause
-    exit /b 1
+    echo ⚠️ Python is not detected on your Windows system.
+    echo 📥 Downloading official Python 3.11.9 (64-bit) installer...
+    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe', 'python_installer.exe')"
+    if not exist python_installer.exe (
+        echo ❌ Error: Failed to download Python installer automatically.
+        echo Please ensure you are connected to the Internet, or download Python manually from:
+        echo https://www.python.org/
+        pause
+        exit /b 1
+    )
+    echo ⚙️ Installing Python silently (User-level, with pip, added to PATH)...
+    start /wait python_installer.exe /quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_doc=0 Include_pip=1
+    
+    :: Clean up the installer file
+    del python_installer.exe
+    
+    :: Update PATH for the current CMD session to point to the newly installed Python
+    set "PATH=%LocalAppData%\Programs\Python\Python311;%LocalAppData%\Programs\Python\Python311\Scripts;%PATH%"
+    
+    :: Double check if Python works now
+    python --version >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo ❌ Error: Python silent installation completed but Python is still not found in PATH.
+        echo Please restart this terminal or install Python manually from:
+        echo https://www.python.org/
+        pause
+        exit /b 1
+    )
+    echo ✅ Python installed and configured successfully!
+) else (
+    echo ✅ Python is already installed on your system.
 )
 
 :: 2. Setup Virtual Environment
