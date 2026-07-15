@@ -8,14 +8,24 @@ from PyQt6.QtCore import QUrl, QSize, QTimer, Qt, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QPushButton, QTabWidget, QToolBar, QStatusBar, QLabel,
-    QStackedWidget, QFrame, QCheckBox, QScrollArea, QSizePolicy, QFormLayout, QGroupBox, QMenu
+    QStackedWidget, QFrame, QCheckBox, QScrollArea, QSizePolicy, QFormLayout, QGroupBox, QMenu,
+    QDialog, QProgressBar
 )
 from PyQt6.QtGui import QIcon, QFont, QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
 
+def get_project_root():
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        if os.path.basename(exe_dir).lower() == "dist":
+            return os.path.dirname(exe_dir)
+        return exe_dir
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+
 # Configuration file path
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+CONFIG_PATH = os.path.join(get_project_root(), "config.json")
 
 def load_config():
     default_config = {
@@ -120,17 +130,26 @@ class SLASHBrowser(QMainWindow):
         self.signals = WorkerSignals()
         
 
-        # Override Chromium's User Agent globally to prevent "Access Denied" or antivirus blocks
-        # Web engines with default QtWebEngine identifiers are often flagged as malicious bots by security systems.
-        # We present a highly trusted, standard Linux Google Chrome user agent.
+        # Override Chromium's User Agent globally to prevent "Access Denied", antivirus blocks, or "disallowed_useragent" on Google logins.
+        # We detect the host operating system to supply a completely native, modern Chrome User-Agent.
+        import platform
+        system_os = platform.system()
+        if system_os == "Windows":
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        elif system_os == "Darwin":
+            ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        else:
+            ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            
         profile = QWebEngineProfile.defaultProfile()
-        profile.setHttpUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        profile.setHttpUserAgent(ua)
         
-        # Get absolute path for local home.html
+        # Get absolute path for local home.html and project root
+        self.project_root = get_project_root()
         if getattr(sys, 'frozen', False):
             self.current_dir = sys._MEIPASS
         else:
-            self.current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.current_dir = self.project_root
         self.home_html_path = os.path.join(self.current_dir, "home.html")
         
         # Set window icon to our generated icon if it exists
@@ -157,6 +176,9 @@ class SLASHBrowser(QMainWindow):
         
         # Apply Central Application Stylesheet (M3 Slate & Sky Theme)
         self.apply_theme()
+        
+        # Start background update check
+        threading.Thread(target=self.check_for_updates, daemon=True).start()
         
     def switch_tab(self, index):
         self.content_stack.setCurrentIndex(index)
@@ -402,18 +424,25 @@ class SLASHBrowser(QMainWindow):
             
         browser = QWebEngineView()
         
-        # Optimize settings for performance, video playback and hardware acceleration
+        # Optimize settings for performance, video playback, full-screen support, and hardware acceleration
         settings = browser.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, True)
         
         browser.setUrl(qurl)
         
         # Handle links opening in new windows (e.g. target="_blank")
         browser.page().createWindow = self.handle_create_window
+        
+        # Handle YouTube / Video Full Screen requests
+        browser.page().fullScreenRequested.connect(self.handle_fullscreen_requested)
         
         i = self.tabs.addTab(browser, label)
         self.tabs.setCurrentIndex(i)
@@ -424,19 +453,40 @@ class SLASHBrowser(QMainWindow):
     def handle_create_window(self, _type):
         browser = QWebEngineView()
         
-        # Optimize settings for performance, video playback and hardware acceleration
+        # Optimize settings for performance, video playback, full-screen support, and hardware acceleration
         settings = browser.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, True)
+        
+        # Handle links opening in new windows (e.g. target="_blank")
+        browser.page().createWindow = self.handle_create_window
+        
+        # Handle YouTube / Video Full Screen requests
+        browser.page().fullScreenRequested.connect(self.handle_fullscreen_requested)
         
         i = self.tabs.addTab(browser, "New Tab")
         self.tabs.setCurrentIndex(i)
         browser.urlChanged.connect(lambda qurl, b=browser: self.on_url_changed(qurl, b))
         browser.loadFinished.connect(lambda ok, index=i, b=browser: self.on_load_finished(ok, index, b))
         return browser
+        
+    def handle_fullscreen_requested(self, request):
+        request.accept()
+        if request.toggleOn():
+            self.nav_bar.hide()
+            self.tabs.tabBar().hide()
+            self.showFullScreen()
+        else:
+            self.nav_bar.show()
+            self.tabs.tabBar().show()
+            self.showNormal()
         
     def on_load_finished(self, ok, index, browser):
         self.update_tab_title(index, browser)
@@ -1522,20 +1572,393 @@ class SLASHBrowser(QMainWindow):
         layout.addWidget(sys_group)
         self.content_stack.addWidget(scroll_area)
 
+    def check_for_updates(self):
+        # We check remote GitHub repository for the latest commit
+        import subprocess
+        
+        # 1. Fetch latest remote SHA from GitHub API
+        url = "https://api.github.com/repos/insanityvrr-dot/SLASHBROWSER/commits/main"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "SLASH-Browser-Updater/1.0"}
+        )
+        
+        remote_sha = None
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                remote_sha = data.get("sha")
+        except Exception as e:
+            print(f"Update check via API failed: {e}")
+            return
+            
+        if not remote_sha:
+            return
+            
+        # 2. Get local commit SHA
+        local_sha = self.config.get("installed_commit", "")
+        
+        # If we don't have a local commit saved, try to get it from local git CLI
+        if not local_sha:
+            try:
+                res = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.project_root,
+                    timeout=5
+                )
+                if res.returncode == 0:
+                    local_sha = res.stdout.strip()
+                    self.config["installed_commit"] = local_sha
+                    save_config(self.config)
+            except Exception as e:
+                print(f"Failed to get local git commit: {e}")
+                
+        # 3. If local_sha is still empty (no git, not saved), seed it with remote_sha to prevent startup popup
+        if not local_sha:
+            self.config["installed_commit"] = remote_sha
+            save_config(self.config)
+            return
+            
+        # 4. Compare remote and local commit SHA
+        if remote_sha != local_sha:
+            QTimer.singleShot(1000, lambda: self.show_update_prompt(remote_sha))
+
+    def show_update_prompt(self, remote_sha):
+        dialog = UpdateDialog(self, remote_sha)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.start_update_install(remote_sha)
+
+    def start_update_install(self, remote_sha):
+        progress = UpdateProgressDialog(self)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        
+        # Start background update task
+        threading.Thread(target=self.run_update_process, args=(remote_sha, progress), daemon=True).start()
+        progress.exec()
+
+    def run_update_process(self, remote_sha, progress_dialog):
+        import subprocess
+        import platform
+        import time
+        
+        def set_status(msg):
+            QTimer.singleShot(0, lambda: progress_dialog.status_lbl.setText(msg))
+            
+        def set_progress(val):
+            QTimer.singleShot(0, lambda: progress_dialog.progress_bar.setValue(val))
+            
+        def set_range(min_val, max_val):
+            QTimer.singleShot(0, lambda: progress_dialog.progress_bar.setRange(min_val, max_val))
+            
+        try:
+            # 1. Detect if Git is available
+            is_git = False
+            if os.path.exists(os.path.join(self.project_root, ".git")):
+                is_git = True
+            
+            # Save the new SHA to config beforehand so that when the new process boots up, it knows it has the update
+            self.config["installed_commit"] = remote_sha
+            save_config(self.config)
+            
+            if is_git:
+                set_status("Git repository detected. Preparing dynamic update sequence...")
+                time.sleep(1)
+                
+                system_os = platform.system()
+                if system_os == "Windows":
+                    bat_path = os.path.join(self.project_root, "win_update_rebuild.bat")
+                    
+                    if getattr(sys, 'frozen', False):
+                        set_status("Preparing Windows build-from-source pipeline (PyInstaller)...")
+                        script_content = f"""@echo off
+echo ===================================================
+echo   🔄 SLASH Auto-Updater: Compiling New Improvements
+echo ===================================================
+echo Waiting for SLASH to close...
+timeout /t 2 /nobreak >nul
+echo.
+echo Pulling latest improvements from git...
+git pull
+echo.
+echo Rebuilding Windows executable with PyInstaller...
+call build_windows.bat
+echo.
+echo Launching newly compiled SLASH Browser...
+start "" "dist\\SLASH.exe"
+del "%~f0"
+exit
+"""
+                    else:
+                        set_status("Preparing Windows Python source update pipeline...")
+                        script_content = f"""@echo off
+echo ===================================================
+echo   🔄 SLASH Auto-Updater: Applying Python Source
+echo ===================================================
+echo Waiting for SLASH to close...
+timeout /t 2 /nobreak >nul
+echo.
+echo Pulling latest improvements from git...
+git pull
+echo.
+echo Launching updated SLASH Browser...
+start "" "win_venv\\Scripts\\python.exe" "browser.py"
+del "%~f0"
+exit
+"""
+                    with open(bat_path, "w") as f:
+                        f.write(script_content)
+                        
+                    set_status("Launching updater script. SLASH will now restart.")
+                    time.sleep(1.5)
+                    
+                    subprocess.Popen([bat_path], cwd=self.project_root, shell=True)
+                    QTimer.singleShot(0, QApplication.quit)
+                    
+                else:
+                    # Linux/macOS
+                    sh_path = os.path.join(self.project_root, "linux_update.sh")
+                    
+                    set_status("Preparing Linux update script...")
+                    script_content = f"""#!/bin/bash
+echo "==================================================="
+echo "  🔄 SLASH Auto-Updater: Applying Improvements"
+echo "==================================================="
+sleep 2
+echo "Pulling latest improvements from git..."
+git pull
+echo "Launching updated SLASH Browser..."
+if [ -f "./slashbrowser" ]; then
+    ./slashbrowser &
+else
+    ./venv/bin/python browser.py &
+fi
+rm -- "$0"
+exit 0
+"""
+                    with open(sh_path, "w") as f:
+                        f.write(script_content)
+                    os.chmod(sh_path, 0o755)
+                    
+                    set_status("Launching updater script. SLASH will now restart.")
+                    time.sleep(1.5)
+                    
+                    subprocess.Popen([sh_path], cwd=self.project_root)
+                    QTimer.singleShot(0, QApplication.quit)
+            
+            else:
+                set_status("No local Git repository. Fetching files from GitHub directly...")
+                time.sleep(1)
+                
+                files_to_download = [
+                    ("browser.py", "https://raw.githubusercontent.com/insanityvrr-dot/SLASHBROWSER/main/browser.py"),
+                    ("home.html", "https://raw.githubusercontent.com/insanityvrr-dot/SLASHBROWSER/main/home.html")
+                ]
+                
+                set_range(0, len(files_to_download))
+                for idx, (filename, url) in enumerate(files_to_download):
+                    set_status(f"Downloading latest {filename}...")
+                    req = urllib.request.Request(url, headers={"User-Agent": "SLASH-Browser-Updater/1.0"})
+                    with urllib.request.urlopen(req, timeout=15) as response:
+                        content = response.read()
+                        
+                    temp_path = os.path.join(self.project_root, f"{filename}.tmp")
+                    with open(temp_path, "wb") as f:
+                        f.write(content)
+                    set_progress(idx + 1)
+                    
+                set_status("Applying downloaded files...")
+                time.sleep(1)
+                
+                system_os = platform.system()
+                if system_os == "Windows":
+                    bat_path = os.path.join(self.project_root, "win_replace_update.bat")
+                    if getattr(sys, 'frozen', False):
+                        script_content = f"""@echo off
+echo Waiting for SLASH to close...
+timeout /t 2 /nobreak >nul
+move /y "browser.py.tmp" "browser.py"
+move /y "home.html.tmp" "home.html"
+echo Rebuilding SLASH Windows executable...
+call build_windows.bat
+start "" "dist\\SLASH.exe"
+del "%~f0"
+exit
+"""
+                    else:
+                        script_content = f"""@echo off
+echo Waiting for SLASH to close...
+timeout /t 2 /nobreak >nul
+move /y "browser.py.tmp" "browser.py"
+move /y "home.html.tmp" "home.html"
+start "" "win_venv\\Scripts\\python.exe" "browser.py"
+del "%~f0"
+exit
+"""
+                    with open(bat_path, "w") as f:
+                        f.write(script_content)
+                        
+                    set_status("Rebooting to apply updates...")
+                    time.sleep(1.5)
+                    subprocess.Popen([bat_path], cwd=self.project_root, shell=True)
+                    QTimer.singleShot(0, QApplication.quit)
+                    
+                else:
+                    sh_path = os.path.join(self.project_root, "linux_replace_update.sh")
+                    script_content = f"""#!/bin/bash
+sleep 2
+mv -f "browser.py.tmp" "browser.py"
+mv -f "home.html.tmp" "home.html"
+if [ -f "./slashbrowser" ]; then
+    ./slashbrowser &
+else
+    ./venv/bin/python browser.py &
+fi
+rm -- "$0"
+exit 0
+"""
+                    with open(sh_path, "w") as f:
+                        f.write(script_content)
+                    os.chmod(sh_path, 0o755)
+                    
+                    set_status("Rebooting to apply updates...")
+                    time.sleep(1.5)
+                    subprocess.Popen([sh_path], cwd=self.project_root)
+                    QTimer.singleShot(0, QApplication.quit)
+                    
+        except Exception as e:
+            print(f"Failed to install update: {e}")
+            set_status(f"Error during installation: {e}")
+            QTimer.singleShot(0, lambda: progress_dialog.progress_bar.setRange(0, 100))
+            QTimer.singleShot(0, lambda: progress_dialog.progress_bar.setValue(0))
+
+
+class UpdateDialog(QDialog):
+    def __init__(self, parent, remote_sha):
+        super().__init__(parent)
+        self.setWindowTitle("Update Available")
+        self.setMinimumWidth(450)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0F172A;
+                border: 1px solid #334155;
+                border-radius: 12px;
+            }
+            QLabel {
+                color: #F8FAFC;
+                font-size: 13px;
+            }
+            QPushButton {
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton#InstallBtn {
+                background-color: #38BDF8;
+                color: #0F172A;
+                border: none;
+            }
+            QPushButton#InstallBtn:hover {
+                background-color: #7DD3FC;
+            }
+            QPushButton#CancelBtn {
+                background-color: #1E293B;
+                color: #94A3B8;
+                border: 1px solid #334155;
+            }
+            QPushButton#CancelBtn:hover {
+                background-color: #334155;
+                color: #F8FAFC;
+            }
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+        
+        header_layout = QHBoxLayout()
+        icon_lbl = QLabel("🚀")
+        icon_lbl.setStyleSheet("font-size: 28px;")
+        header_layout.addWidget(icon_lbl)
+        
+        title_lbl = QLabel("New SLASH Update Detected!")
+        title_lbl.setStyleSheet("font-size: 18px; font-weight: bold; color: #38BDF8;")
+        header_layout.addWidget(title_lbl)
+        header_layout.addStretch()
+        layout.addLayout(header_layout)
+        
+        desc_lbl = QLabel(
+            "Every time you upload new improvements to SLASH, the browser automatically detects it.\n\n"
+            "Would you like to install the latest improvements now?\n"
+            f"New Commit: {remote_sha[:10]}"
+        )
+        desc_lbl.setWordWrap(True)
+        layout.addWidget(desc_lbl)
+        
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.cancel_btn = QPushButton("Later")
+        self.cancel_btn.setObjectName("CancelBtn")
+        self.cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(self.cancel_btn)
+        
+        self.install_btn = QPushButton("Install & Restart")
+        self.install_btn.setObjectName("InstallBtn")
+        self.install_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(self.install_btn)
+        
+        layout.addLayout(btn_layout)
+
+
+class UpdateProgressDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Installing Update")
+        self.setMinimumWidth(400)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0F172A;
+                border: 1px solid #334155;
+                border-radius: 12px;
+            }
+            QLabel {
+                color: #F8FAFC;
+                font-size: 13px;
+            }
+            QProgressBar {
+                background-color: #1E293B;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                text-align: center;
+                color: white;
+            }
+            QProgressBar::chunk {
+                background-color: #38BDF8;
+                border-radius: 6px;
+            }
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+        
+        self.status_lbl = QLabel("Downloading and applying updates...")
+        self.status_lbl.setWordWrap(True)
+        layout.addWidget(self.status_lbl)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)
+        layout.addWidget(self.progress_bar)
+
 if __name__ == "__main__":
-    # Add Chromium CLI arguments to prevent sandboxing issues and security flags causing "Access Denied" or antivirus blocks
+    # Add Chromium CLI arguments to support stable video decoding, proper sandbox usage, and secure Google OAuth flows.
     sys.argv.append("--no-sandbox")
     sys.argv.append("--disable-setuid-sandbox")
-    sys.argv.append("--ignore-certificate-errors")
-    sys.argv.append("--disable-web-security")
     
-    # Force GPU and Hardware Acceleration to eliminate YouTube video glitches & lag
-    sys.argv.append("--ignore-gpu-blocklist")
-    sys.argv.append("--enable-gpu-rasterization")
-    sys.argv.append("--enable-native-gpu-memory-buffers")
-    sys.argv.append("--num-raster-threads=4")
-    sys.argv.append("--enable-accelerated-video-decode")
-    sys.argv.append("--enable-accelerated-video-encode")
+    # Enable standard video decoders and smooth scrolling without forcing unstable GPU blocklist bypasses
     sys.argv.append("--enable-smooth-scrolling")
     
     app = QApplication(sys.argv)
