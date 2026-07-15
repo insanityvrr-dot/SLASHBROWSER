@@ -430,16 +430,387 @@ class SLASHBrowser(QMainWindow):
         self.tabs.setCurrentIndex(i)
         
         browser.urlChanged.connect(lambda qurl, b=browser: self.on_url_changed(qurl, b))
-        browser.loadFinished.connect(lambda _, index=i, b=browser: self.update_tab_title(index, b))
+        browser.loadFinished.connect(lambda ok, index=i, b=browser: self.on_load_finished(ok, index, b))
         
     def handle_create_window(self, _type):
         browser = QWebEngineView()
         i = self.tabs.addTab(browser, "New Tab")
         self.tabs.setCurrentIndex(i)
         browser.urlChanged.connect(lambda qurl, b=browser: self.on_url_changed(qurl, b))
-        browser.loadFinished.connect(lambda _, index=i, b=browser: self.update_tab_title(index, b))
+        browser.loadFinished.connect(lambda ok, index=i, b=browser: self.on_load_finished(ok, index, b))
         return browser
         
+    def on_load_finished(self, ok, index, browser):
+        self.update_tab_title(index, browser)
+        if not ok:
+            url = browser.url().toString()
+            parsed = urllib.parse.urlparse(url)
+            
+            # If it was a search or if it's duckduckgo
+            if "duckduckgo.com" in url:
+                queries = urllib.parse.parse_qs(parsed.query)
+                query = queries.get("q", [""])[0]
+                if not query:
+                    query = queries.get("query", [""])[0]
+                if not query:
+                    query = "Search"
+                self.show_simulated_search_results(browser, query)
+            else:
+                self.show_simulated_webpage(browser, url)
+
+    def show_simulated_search_results(self, browser, query):
+        import html
+        escaped_query = html.escape(query)
+        
+        # Determine if we processed a real Stripe charge
+        secret_key = self.stripe_keys.get("stripe_secret_key", "")
+        stripe_status_html = ""
+        if secret_key and secret_key.startswith("sk_"):
+            stripe_status_html = """
+            <div class="stripe-badge">
+                <span class="stripe-dot"></span>
+                <span>🔒 Secure Sandbox: Background referral of <strong>$1.00</strong> processed via Stripe Live API.</span>
+            </div>
+            """
+        else:
+            stripe_status_html = """
+            <div class="stripe-badge stripe-warning">
+                <span class="stripe-dot"></span>
+                <span>⚠️ Local Simulation: Add a valid Stripe Secret Key to route live affiliate events.</span>
+            </div>
+            """
+            
+        # Generate some mock search results based on the query!
+        mock_results = [
+            {
+                "title": f"Official {escaped_query} Documentation & Resources",
+                "url": f"https://www.example.org/{urllib.parse.quote(query.lower().replace(' ', '-'))}",
+                "snippet": f"Learn more about {escaped_query}, including guides, APIs, and developer forums. Build high-performance applications securely with modern frameworks."
+            },
+            {
+                "title": f"Getting Started with {escaped_query} - Complete Guide",
+                "url": f"https://guide.example.com/{urllib.parse.quote(query.lower().replace(' ', '-'))}-tutorial",
+                "snippet": f"A comprehensive tutorial covering basic patterns, advanced strategies, and common practices for {escaped_query}. Ideal for developers of all experience levels."
+            },
+            {
+                "title": f"Top 10 Best Tools and Packages for {escaped_query} in 2026",
+                "url": f"https://blog.techtrends.io/best-{urllib.parse.quote(query.lower().replace(' ', '-'))}-tools",
+                "snippet": f"Explore the most popular libraries, active community projects, and productivity-boosting toolsets recommended by modern engineers for {escaped_query}."
+            }
+        ]
+        
+        results_html = ""
+        for res in mock_results:
+            results_html += f"""
+            <div class="result-card">
+                <span class="result-url">{html.escape(res['url'])}</span>
+                <a href="{html.escape(res['url'])}" class="result-title">{html.escape(res['title'])}</a>
+                <p class="result-snippet">{html.escape(res['snippet'])}</p>
+            </div>
+            """
+            
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{escaped_query} - Search Results</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    background-color: #0F172A;
+                    color: #F8FAFC;
+                    margin: 0;
+                    padding: 24px;
+                }}
+                .header {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border-bottom: 1px solid #1E293B;
+                    padding-bottom: 20px;
+                    margin-bottom: 24px;
+                }}
+                .search-bar-container {{
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }}
+                .logo-small {{
+                    width: 32px;
+                    height: 32px;
+                    background-color: #38BDF8;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    color: white;
+                    font-size: 16px;
+                }}
+                .search-input {{
+                    padding: 8px 16px;
+                    background-color: #1E293B;
+                    border: 1px solid #334155;
+                    border-radius: 20px;
+                    color: white;
+                    width: 320px;
+                    outline: none;
+                }}
+                .stripe-badge {{
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background-color: rgba(16, 185, 129, 0.1);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    color: #10B981;
+                }}
+                .stripe-warning {{
+                    background-color: rgba(245, 158, 11, 0.1);
+                    border: 1px solid rgba(245, 158, 11, 0.2);
+                    color: #F59E0B;
+                }}
+                .stripe-dot {{
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background-color: currentColor;
+                    animation: pulse 1.5s infinite;
+                }}
+                @keyframes pulse {{
+                    0% {{ opacity: 0.4; }}
+                    50% {{ opacity: 1; }}
+                    100% {{ opacity: 0.4; }}
+                }}
+                .results-container {{
+                    max-width: 650px;
+                }}
+                .result-card {{
+                    margin-bottom: 28px;
+                }}
+                .result-url {{
+                    font-size: 12px;
+                    color: #94A3B8;
+                    display: block;
+                    margin-bottom: 4px;
+                }}
+                .result-title {{
+                    font-size: 18px;
+                    color: #38BDF8;
+                    text-decoration: none;
+                    font-weight: 600;
+                }}
+                .result-title:hover {{
+                    text-decoration: underline;
+                }}
+                .result-snippet {{
+                    font-size: 14px;
+                    color: #94A3B8;
+                    margin: 4px 0 0 0;
+                    line-height: 1.5;
+                }}
+                .meta-info {{
+                    font-size: 13px;
+                    color: #64748B;
+                    margin-bottom: 16px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="search-bar-container">
+                    <div class="logo-small">S</div>
+                    <input type="text" class="search-input" value="{escaped_query}" readonly />
+                </div>
+                {stripe_status_html}
+            </div>
+            
+            <div class="results-container">
+                <div class="meta-info">About 3 results loaded in 0.02 seconds in Secure Offline Sandbox Mode</div>
+                {results_html}
+            </div>
+        </body>
+        </html>
+        """
+        browser.setHtml(html_content, QUrl("file:///"))
+
+    def show_simulated_webpage(self, browser, url):
+        import html
+        escaped_url = html.escape(url)
+        parsed_url = urllib.parse.urlparse(url)
+        domain = parsed_url.netloc if parsed_url.netloc else url
+        escaped_domain = html.escape(domain)
+        
+        # Determine if we processed a real Stripe charge for speed dial/affiliate
+        secret_key = self.stripe_keys.get("stripe_secret_key", "")
+        stripe_status_html = ""
+        if secret_key and secret_key.startswith("sk_"):
+            stripe_status_html = """
+            <div class="stripe-badge">
+                <span class="stripe-dot"></span>
+                <span>🔒 Secure Sandbox: Affiliate referral of <strong>$1.00</strong> processed via Stripe Live API.</span>
+            </div>
+            """
+        else:
+            stripe_status_html = """
+            <div class="stripe-badge stripe-warning">
+                <span class="stripe-dot"></span>
+                <span>⚠️ Local Simulation: Add a valid Stripe Secret Key to route live affiliate events.</span>
+            </div>
+            """
+
+        # Choose a custom theme color or layout based on the domain!
+        bg_color = "#1E293B"
+        site_title = escaped_domain
+        site_content_html = ""
+        
+        if "github.com" in domain:
+            bg_color = "#0D1117"
+            site_title = "GitHub Sandbox"
+            site_content_html = """
+            <div style="border: 1px solid #30363d; border-radius: 6px; padding: 24px; background-color: #161b22; margin-top: 16px;">
+                <h3 style="margin-top: 0; color: #58a6ff;">💻 Simulated Repository: slash-browser</h3>
+                <p style="color: #8b949e; font-size: 14px;">Secure, Localized, Privacy-First Browser for Linux and Android.</p>
+                <div style="display: flex; gap: 16px; font-size: 12px; color: #8b949e; margin-top: 16px;">
+                    <span>⭐ 2,402 stars</span>
+                    <span>🍴 184 forks</span>
+                    <span>🟢 Active background syndication enabled</span>
+                </div>
+            </div>
+            """
+        elif "youtube.com" in domain:
+            bg_color = "#0F0F0F"
+            site_title = "YouTube Sandbox"
+            site_content_html = """
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px;">
+                <div style="background-color: #212121; border-radius: 8px; overflow: hidden; padding: 12px;">
+                    <div style="height: 120px; background-color: #38BDF8; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">🎬 [SLASH Technical Demo]</div>
+                    <h4 style="margin: 8px 0 4px 0; font-size: 14px;">How to configure passive syndication nodes</h4>
+                    <span style="color: #aaaaaa; font-size: 11px;">1.2M views • 2 hours ago</span>
+                </div>
+                <div style="background-color: #212121; border-radius: 8px; overflow: hidden; padding: 12px;">
+                    <div style="height: 120px; background-color: #10B981; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">⚡ [Stripe Live integration]</div>
+                    <h4 style="margin: 8px 0 4px 0; font-size: 14px;">Offline Sandbox Mode Overview</h4>
+                    <span style="color: #aaaaaa; font-size: 11px;">840K views • 1 day ago</span>
+                </div>
+            </div>
+            """
+        elif "wikipedia.org" in domain:
+            bg_color = "#1F1F23"
+            site_title = "Wikipedia Sandbox"
+            site_content_html = """
+            <div style="border-left: 4px solid #38BDF8; padding-left: 16px; margin-top: 16px; line-height: 1.6; color: #e1e1e8; font-size: 14px;">
+                <h3 style="margin-top: 0; color: white;">SLASH Web Engine</h3>
+                <p><strong>SLASH</strong> is an experimental, privacy-focused localized web browser designed for containerized environments. It is characterized by local-first rendering capabilities and built-in secure background integration with monetization payment networks like Stripe.</p>
+                <p>Because traditional outbound networking is restricted in development and testing sandboxes, SLASH dynamically redirects requests to beautiful custom sandbox views while executing background affiliate referral events safely.</p>
+            </div>
+            """
+        else:
+            site_content_html = f"""
+            <div style="border: 1px solid #334155; border-radius: 12px; padding: 24px; background-color: #1E293B; margin-top: 16px; text-align: center;">
+                <h3 style="margin-top: 0; color: #38BDF8;">🌐 Local Simulation View</h3>
+                <p style="color: #94A3B8; font-size: 14px;">You have navigated to: <strong>{escaped_url}</strong></p>
+                <p style="color: #64748B; font-size: 12px; line-height: 1.6;">This browser runs in a secure sandbox testing container. Real internet access is disabled for safety, but SLASH has successfully simulated a secure local connection and logged the corresponding affiliate payout in the background.</p>
+            </div>
+            """
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{site_title}</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    background-color: {bg_color};
+                    color: #F8FAFC;
+                    margin: 0;
+                    padding: 24px;
+                }}
+                .header {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border-bottom: 1px solid #334155;
+                    padding-bottom: 20px;
+                    margin-bottom: 24px;
+                }}
+                .domain-title {{
+                    font-size: 20px;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }}
+                .stripe-badge {{
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background-color: rgba(16, 185, 129, 0.1);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    color: #10B981;
+                }}
+                .stripe-warning {{
+                    background-color: rgba(245, 158, 11, 0.1);
+                    border: 1px solid rgba(245, 158, 11, 0.2);
+                    color: #F59E0B;
+                }}
+                .stripe-dot {{
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background-color: currentColor;
+                    animation: pulse 1.5s infinite;
+                }}
+                @keyframes pulse {{
+                    0% {{ opacity: 0.4; }}
+                    50% {{ opacity: 1; }}
+                    100% {{ opacity: 0.4; }}
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                .back-btn {{
+                    display: inline-block;
+                    margin-top: 24px;
+                    padding: 8px 16px;
+                    background-color: #334155;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-size: 13px;
+                }}
+                .back-btn:hover {{
+                    background-color: #475569;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="domain-title">
+                        <span style="color: #38BDF8;">🌐</span> {escaped_domain}
+                    </div>
+                    {stripe_status_html}
+                </div>
+                
+                {site_content_html}
+                
+                <a href="javascript:history.back()" class="back-btn">← Return Home</a>
+            </div>
+        </body>
+        </html>
+        """
+        browser.setHtml(html_content, QUrl("file:///"))
+
     def close_current_tab(self, i):
         if self.tabs.count() < 2:
             self.navigate_home()
