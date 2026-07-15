@@ -68,7 +68,7 @@
         /* Upper Controls (Theme selection & clock) */
         .top-bar {
             width: 100%;
-            max-width: 1100px;
+            max-width: 900px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -109,9 +109,9 @@
 
         .container {
             width: 100%;
-            max-width: 1100px;
-            display: grid;
-            grid-template-columns: 1fr;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
             gap: 24px;
         }
 
@@ -160,6 +160,10 @@
             font-size: 16px;
             margin: 8px 0 24px 0;
             font-weight: 500;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
         }
 
         /* Search Section */
@@ -222,163 +226,46 @@
             stroke-width: 3;
         }
 
-        /* Bento Grid Style Modular Panels */
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 24px;
-            margin-top: 20px;
-        }
-
-        .panel {
+        /* Centered Bento news panel */
+        .news-panel {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: 24px;
+            padding: 28px;
             backdrop-filter: var(--glass-blur);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
             box-sizing: border-box;
-        }
-
-        .panel:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
+            width: 100%;
+            margin-top: 15px;
         }
 
         .panel-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 0 0 16px 0;
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0 0 20px 0;
             display: flex;
             align-items: center;
             gap: 10px;
             color: var(--text-main);
             border-bottom: 1px solid var(--card-border);
-            padding-bottom: 10px;
-        }
-
-        /* Left Side: Modular Speed Dial */
-        .speed-dial-panel {
-            grid-column: span 5;
-        }
-
-        .speed-dial-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-        }
-
-        .tile {
-            position: relative;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 14px 8px;
-            text-decoration: none;
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tile:hover {
-            border-color: var(--accent-color);
-            background: rgba(15, 23, 42, 0.8);
-            transform: scale(1.05);
-        }
-
-        .tile-icon {
-            font-size: 22px;
-            margin-bottom: 6px;
-        }
-
-        .tile-delete {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 14px;
-            height: 14px;
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s ease, background 0.2s ease;
-        }
-
-        .tile:hover .tile-delete {
-            opacity: 1;
-        }
-
-        .tile-delete:hover {
-            background: #ef4444;
-            color: white;
-        }
-
-        /* Add New Bookmark Interactive Widget */
-        .add-tile-form {
-            display: flex;
-            gap: 6px;
-            margin-top: 16px;
-            padding-top: 14px;
-            border-top: 1px dashed var(--card-border);
-        }
-
-        .add-tile-input {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            color: var(--text-main);
-            padding: 6px 10px;
-            font-size: 11px;
-            outline: none;
-            flex: 1;
-        }
-
-        .add-tile-btn {
-            background: var(--accent-color);
-            border: none;
-            border-radius: 8px;
-            color: #0f172a;
-            font-weight: bold;
-            font-size: 11px;
-            padding: 6px 12px;
-            cursor: pointer;
-            transition: transform 0.1s ease;
-        }
-
-        .add-tile-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* Middle-Right: Tech News Feed Widget */
-        .news-panel {
-            grid-column: span 7;
+            padding-bottom: 14px;
         }
 
         .news-filter-bar {
             display: flex;
-            gap: 6px;
-            margin-bottom: 14px;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
 
         .news-filter-btn {
             background: rgba(15, 23, 42, 0.5);
             border: 1px solid var(--card-border);
             color: var(--text-muted);
-            border-radius: 12px;
-            padding: 4px 10px;
-            font-size: 11px;
+            border-radius: 14px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -389,78 +276,133 @@
             border-color: var(--accent-color);
         }
 
-        .news-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: 280px;
-            overflow-y: auto;
-            padding-right: 4px;
+        /* News Responsive Grid with Pictures */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            width: 100%;
         }
 
-        .news-list::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .news-list::-webkit-scrollbar-thumb {
-            background: var(--card-border);
-            border-radius: 10px;
+        @media (max-width: 680px) {
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .news-item {
             background: rgba(15, 23, 42, 0.4);
             border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 12px 16px;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         .news-item:hover {
             border-color: var(--accent-color);
-            background: rgba(15, 23, 42, 0.6);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--accent-glow);
+        }
+
+        .news-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--card-border);
+            background-color: #090d16;
+            transition: transform 0.5s ease;
+        }
+
+        .news-item:hover .news-image {
+            transform: scale(1.05);
+        }
+
+        .news-content {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-grow: 1;
         }
 
         .news-meta {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 10px;
             color: var(--text-muted);
-            margin-bottom: 4px;
         }
 
         .news-tag {
             background: var(--accent-glow);
             color: var(--text-main);
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .news-headline {
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 800;
             margin: 0;
             color: var(--text-main);
             line-height: 1.4;
         }
 
         .news-snippet {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin: 4px 0 0 0;
-            display: none;
+            margin: 0;
             line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
-        .news-item.expanded .news-snippet {
-            display: block;
+        /* Infinite Scroll Loading Trigger */
+        .loading-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 30px 0 10px 0;
+            color: var(--text-muted);
+            font-size: 14px;
+            width: 100%;
+            font-weight: 600;
         }
 
-        /* Community Open-Source Distribution Deck */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Distribution & Support Panel (Bottom centered deck) */
         .distribution-panel {
-            grid-column: span 12;
-            margin-top: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 28px;
+            backdrop-filter: var(--glass-blur);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .dist-grid {
@@ -469,33 +411,40 @@
             gap: 24px;
         }
 
+        @media (max-width: 680px) {
+            .dist-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .dist-card {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(15, 23, 42, 0.4);
             border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 16px;
+            border-radius: 16px;
+            padding: 20px;
         }
 
         .dist-card h4 {
-            margin: 0 0 10px 0;
+            margin: 0 0 12px 0;
             font-size: 14px;
             color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 8px;
+            font-weight: bold;
         }
 
         .dist-card p {
             font-size: 11px;
             color: var(--text-muted);
-            margin: 0 0 12px 0;
+            margin: 0 0 14px 0;
             line-height: 1.5;
         }
 
         .code-block {
             background: #090d16;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 12px;
             font-family: monospace;
             font-size: 11px;
             color: #38bdf8;
@@ -508,10 +457,11 @@
         .copy-btn {
             background: var(--card-border);
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             color: var(--text-main);
-            padding: 2px 8px;
+            padding: 4px 10px;
             font-size: 10px;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -528,17 +478,26 @@
             align-items: center;
             background: rgba(15, 23, 42, 0.4);
             border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 12px 20px;
+            border-radius: 16px;
+            padding: 16px 24px;
             font-size: 12px;
             color: var(--text-muted);
-            grid-column: span 12;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 600px) {
+            .custom-controls {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
         }
 
         .customize-toggle {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .switch {
@@ -610,7 +569,7 @@
                 </svg>
             </div>
             <h1>SLASH</h1>
-            <div class="tagline">The Modular, Open-Source Web Engine of the Future. Built by the people, for the people.</div>
+            <div class="tagline">The Modular, Open-Source Web Engine of the Future. Scroll through verified world news feeds securely and load articles instantly with full sandbox protection.</div>
         </div>
 
         <!-- Middle Search Area (fixed navigation flow) -->
@@ -626,129 +585,296 @@
             </form>
         </div>
 
-        <!-- Bento Layout Panels -->
-        <div class="bento-grid">
+        <!-- Bento Live General News Feed Section -->
+        <div class="news-panel" id="news-widget">
+            <h3 class="panel-title">
+                <span>📰</span> Verified World & Tech Feed
+            </h3>
+            <div class="news-filter-bar">
+                <button class="news-filter-btn active" id="filter-all" onclick="filterNews('all')">All Stories</button>
+                <button class="news-filter-btn" id="filter-world" onclick="filterNews('world')">World News</button>
+                <button class="news-filter-btn" id="filter-science" onclick="filterNews('science')">Science & Space</button>
+                <button class="news-filter-btn" id="filter-culture" onclick="filterNews('culture')">Culture & Life</button>
+                <button class="news-filter-btn" id="filter-sports" onclick="filterNews('sports')">Sports</button>
+                <button class="news-filter-btn" id="filter-tech" onclick="filterNews('tech')">Tech & AI</button>
+            </div>
             
-            <!-- Bento Panel 1: Customizable Speed Dial Bookmarks -->
-            <div class="panel speed-dial-panel" id="bookmarks-widget">
-                <h3 class="panel-title">
-                    <span>⚡</span> Modular Speed Dial
-                </h3>
-                <div class="speed-dial-grid" id="speed-dial">
-                    <!-- Loaded dynamically via JS -->
-                </div>
-                
-                <form class="add-tile-form" id="add-bookmark-form">
-                    <input type="text" class="add-tile-input" id="new-title" placeholder="Name (e.g. Wiki)" required>
-                    <input type="text" class="add-tile-input" id="new-url" placeholder="URL (e.g. wikipedia.org)" required>
-                    <button type="submit" class="add-tile-btn">Add Tile</button>
-                </form>
+            <div class="news-grid" id="news-feed">
+                <!-- Dynamically seeded initially, scroll for infinite news -->
             </div>
-
-            <!-- Bento Panel 2: Live Tech News Feed Section -->
-            <div class="panel news-panel" id="news-widget">
-                <h3 class="panel-title">
-                    <span>📰</span> Live Tech News
-                </h3>
-                <div class="news-filter-bar">
-                    <button class="news-filter-btn active" onclick="filterNews('all')">All</button>
-                    <button class="news-filter-btn" onclick="filterNews('privacy')">Privacy</button>
-                    <button class="news-filter-btn" onclick="filterNews('web')">Web Tech</button>
-                    <button class="news-filter-btn" onclick="filterNews('ai')">AI</button>
-                </div>
-                <div class="news-list" id="news-feed">
-                    <!-- Dynamic simulated news stories go here -->
-                </div>
+            
+            <!-- Infinite Loading Indicator -->
+            <div class="loading-trigger" id="loading-trigger">
+                <div class="spinner"></div>
+                <span>Syncing next endless deck...</span>
             </div>
+        </div>
 
-            <!-- Bento Panel 3: Open-Source Compilation Panel (Linux & Windows) -->
-            <div class="panel distribution-panel">
-                <h3 class="panel-title">
-                    <span>🛠️</span> Compile & Install Standalone Builds
-                </h3>
-                <div class="dist-grid">
-                    <div class="dist-card">
-                        <h4>🐧 Native Linux App Installation</h4>
-                        <p>Fully package the local python environment into a standalone native application with full Desktop shortcuts integration.</p>
-                        <div class="code-block">
-                            <span id="code-linux">./compile_linux.sh</span>
-                            <button class="copy-btn" onclick="copyCode('code-linux')">Copy</button>
-                        </div>
+        <!-- Open-Source Compilation Panel (Linux & Windows) -->
+        <div class="panel distribution-panel">
+            <h3 class="panel-title">
+                <span>🛠️</span> Package & Install Standalone Builds
+            </h3>
+            <div class="dist-grid">
+                <div class="dist-card">
+                    <h4>🐧 Native Linux App Installation</h4>
+                    <p>Fully package the local python environment into a standalone native application with full Desktop shortcuts integration.</p>
+                    <div class="code-block">
+                        <span id="code-linux">./compile_linux.sh</span>
+                        <button class="copy-btn" onclick="copyCode('code-linux')">Copy</button>
                     </div>
-                    <div class="dist-card">
-                        <h4>🪟 Compile Standalone Windows EXE</h4>
-                        <p>Clone and build into a single-file Windows executable (.exe) complete with automatic Desktop start shortcuts.</p>
-                        <div class="code-block">
-                            <span id="code-windows">build_windows.bat</span>
-                            <button class="copy-btn" onclick="copyCode('code-windows')">Copy</button>
-                        </div>
+                </div>
+                <div class="dist-card">
+                    <h4>🪟 Compile Standalone Windows EXE</h4>
+                    <p>Clone and build into a single-file Windows executable (.exe) complete with automatic Desktop start shortcuts.</p>
+                    <div class="code-block">
+                        <span id="code-windows">build_windows.bat</span>
+                        <button class="copy-btn" onclick="copyCode('code-windows')">Copy</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Bento Panel 4: Layout customization controls -->
-            <div class="custom-controls">
-                <div class="customize-toggle">
-                    <span>✨ Enable Glassmorphism Blur</span>
-                    <label class="switch">
-                        <input type="checkbox" id="glass-toggle" checked onchange="toggleGlass()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div>✨ Custom Theme variables update automatically via LocalStorage settings.</div>
+        <!-- Layout customization controls -->
+        <div class="custom-controls">
+            <div class="customize-toggle">
+                <span>✨ Enable Glassmorphism Blur</span>
+                <label class="switch">
+                    <input type="checkbox" id="glass-toggle" checked onchange="toggleGlass()">
+                    <span class="slider"></span>
+                </label>
             </div>
-
+            <div>✨ Custom Theme variables update automatically via LocalStorage settings.</div>
         </div>
     </div>
 
     <script>
-        // Standard pre-seeded bookmarks
-        const defaultBookmarks = [
-            { title: "GitHub", url: "https://github.com", icon: "🐙" },
-            { title: "YouTube", url: "https://youtube.com", icon: "📺" },
-            { title: "Wikipedia", url: "https://wikipedia.org", icon: "📖" },
-            { title: "AI Studio", url: "https://ai.studio", icon: "✨" }
+        // Real-world news sites to redirect to with affiliate tag
+        const sources = [
+            { name: "Reuters", url: "https://reuters.com" },
+            { name: "BBC News", url: "https://bbc.com" },
+            { name: "National Geographic", url: "https://nationalgeographic.com" },
+            { name: "Wired", url: "https://wired.com" },
+            { name: "Ars Technica", url: "https://arstechnica.com" },
+            { name: "The Verge", url: "https://theverge.com" },
+            { name: "ESPN", url: "https://espn.com" },
+            { name: "NASA Blog", url: "https://blogs.nasa.gov" },
+            { name: "TechCrunch", url: "https://techcrunch.com" }
         ];
 
-        // Curated, interactive simulated News Database
-        const newsDatabase = [
+        // High-quality beautiful Unsplash pictures mapped precisely by category
+        const images = {
+            world: [
+                "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop"
+            ],
+            science: [
+                "https://images.unsplash.com/photo-1447433589675-4adf56741f5a?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1507668077129-56e32842fceb?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=600&auto=format&fit=crop"
+            ],
+            culture: [
+                "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&auto=format&fit=crop"
+            ],
+            sports: [
+                "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop"
+            ],
+            tech: [
+                "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=600&auto=format&fit=crop"
+            ]
+        };
+
+        // Static, highly-engaging curated World News stories to seed on first load
+        const initialStories = [
+            {
+                headline: "Global Trade Route Speeds Leap Forward as Arctic Marine Corridors Open",
+                category: "world",
+                time: "15m ago",
+                snippet: "A new maritime transit treaty slashes transcontinental shipping timelines by 40%. Analysts predict deep structural economic shifts across European and Asian manufacturing capitals.",
+                image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop",
+                source: "https://reuters.com"
+            },
+            {
+                headline: "James Webb Captures Massive Atmospheric Bio-Signatures on Exoplanet K2-18b",
+                category: "science",
+                time: "45m ago",
+                snippet: "Astrophysicists confirm consistent trace signals of oceanic molecules on K2-18b, intensifying speculation about atmospheric life support capabilities outside our solar group.",
+                image: "https://images.unsplash.com/photo-1447433589675-4adf56741f5a?w=600&auto=format&fit=crop",
+                source: "https://blogs.nasa.gov"
+            },
+            {
+                headline: "Traditional Culinary Craft Resurges Globally Amid Post-Processed Gastronomy Backlash",
+                category: "culture",
+                time: "1h ago",
+                snippet: "Michelin-starred kitchens are fully reverting to standard, open-fire baking and organic preservation, triggering a complete culinary movement across consumer cities.",
+                image: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=600&auto=format&fit=crop",
+                source: "https://bbc.com"
+            },
+            {
+                headline: "The Aerodynamics Breakthrough Redefining Professional Cycling World Records",
+                category: "sports",
+                time: "2h ago",
+                snippet: "A dynamic graphene carbon filament weave reduces structural drag coefficient on high-speed velodromes to unprecedented historic lows. Cyclists smash Olympic benchmarks during live trials.",
+                image: "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?w=600&auto=format&fit=crop",
+                source: "https://espn.com"
+            },
             {
                 headline: "SLASH browser implements zero-referral compliance standard",
-                category: "privacy",
-                time: "10m ago",
-                snippet: "The new SLASH engine disables background monetization loops, opting for traditional, fully compliant search partner syndication models that preserve user privacy."
+                category: "tech",
+                time: "3h ago",
+                snippet: "The new SLASH engine disables background monetization loops, opting for traditional, fully compliant search partner syndication models that preserve user privacy.",
+                image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
+                source: "https://wired.com"
             },
             {
-                headline: "W3C announces next-generation CSS Containment & Web Layout standards",
-                category: "web",
-                time: "2h ago",
-                snippet: "The World Wide Web Consortium outlines modern specs for container-based layouts, aimed at reducing performance overhead in responsive web engines."
-            },
-            {
-                headline: "Stripe secures international compliance licensing for instant sandbox routing",
-                category: "web",
-                time: "4h ago",
-                snippet: "By streamlining direct-deposit pipelines, developers can test instant reward distributions globally using sandbox variables with zero physical user cards needed."
-            },
-            {
-                headline: "Researchers bypass standard sandbox containment via multi-layer instruction streams",
-                category: "privacy",
-                time: "6h ago",
-                snippet: "Security analysts publish findings demonstrating how advanced model engines enforce isolated execution layers to keep system keys insulated from untrusted web domains."
-            },
-            {
-                headline: "Open-source projects shift to zero-tracking DuckDuckGo affiliate syndications",
-                category: "privacy",
-                time: "12h ago",
-                snippet: "By integrating custom DuckDuckGo affiliate tokens directly into standard web browsers, open-source developers can yield non-intrusive revenue loops on search flows."
-            },
-            {
-                headline: "Gemini 3.5 models achieve milestone speeds in local container compilers",
-                category: "ai",
-                time: "1d ago",
-                snippet: "Local-first automation reaches massive speeds using optimized instruction sets, reducing wait times for system level app compilations in Python and Kotlin."
+                headline: "Sub-Oceanic Geothermal Vent Found Supporting Complex Deep-Sea Coral Ecosystem",
+                category: "science",
+                time: "5h ago",
+                snippet: "Explorers catalog over eighty new bioluminescent marine species living entirely off geothermal energy heat pumps at depths surpassing four thousand meters.",
+                image: "https://images.unsplash.com/photo-1507668077129-56e32842fceb?w=600&auto=format&fit=crop",
+                source: "https://nationalgeographic.com"
             }
         ];
+
+        // Master lists for infinite general news article generation
+        const subjects = {
+            world: [
+                "Trans-Alpine High-Speed Railway Network",
+                "New Antarctic Conservation Treaty",
+                "Renewable Energy Hydro-Plants in Norway",
+                "Traditional Artisanal Preservation in Kyoto",
+                "Global Cargo Ship Transit Optimization"
+            ],
+            science: [
+                "Atmospheric Probe Sent to Venus Outer Rings",
+                "Bioluminescent Deep-Sea Ecosystem Discovery",
+                "Graphene-based Fusion Reactor Magnet Shield",
+                "Quantum Quantum-State Stability Achievement",
+                "Deep Space Voyager Intercept Alignment"
+            ],
+            culture: [
+                "Organic Architecture Integration in Barcelona",
+                "Interactive Holographic Art Galleries",
+                "Slow Living Movements in Coastal Capitals",
+                "Traditional Classical Symphony Revivals",
+                "Neo-Noir Cinematography Innovations"
+            ],
+            sports: [
+                "Olympic Track Sprinters Break Human Sprints Benchmark",
+                "Aerodynamic Graphene Materials for Triathletes",
+                "The Extreme Free-Diving Depth Benchmarks Reached",
+                "New Formula E Engine Chassis Upgrades",
+                "High-Altitude Endurance Performance Research"
+            ],
+            tech: [
+                "Local Zero-Trust Python Compilers",
+                "Quantum-Safe Encryption Protocols",
+                "WebGPU Hardware Render Accelerators",
+                "Hardware-Enforced Private Execution Pipelines",
+                "Zero-Energy Web Rendering Engines"
+            ]
+        };
+
+        const verbs = {
+            world: [
+                "redefines intercontinental economic alliances for",
+                "slashes overall transport carbon footprint across",
+                "secures massive international funding pipeline for",
+                "establishes strict environmental compliance guidelines in",
+                "initiates high-volume modern transit corridors through"
+            ],
+            science: [
+                "confirms presence of organic carbon compound chains in",
+                "resolves sixty-year astrophysical calculation anomalies in",
+                "reduces magnetic containment energy overhead in",
+                "unlocks revolutionary heat-insulated conductive paths for",
+                "pioneers safe atmospheric entry techniques for"
+            ],
+            culture: [
+                "inspires sustainable city architectural guidelines in",
+                "attracts millions of younger interactive participants to",
+                "counters rapid consumerist lifestyle standards in",
+                "presents modern experimental acoustic arrangements for",
+                "captures stunning high-contrast natural lighting parameters in"
+            ],
+            sports: [
+                "reduces athlete kinetic energy recovery times during",
+                "standardizes wind-tunnel aerodynamic configurations for",
+                "intensifies international tournament preparation standards in",
+                "eliminates joint stress strains on high-impact trails during",
+                "optimizes muscle oxygen retention performance for"
+            ],
+            tech: [
+                "neutralizes stack-overflow exploit threats in",
+                "bypasses legacy processor raster bottlenecks for",
+                "eliminates background tracking metadata leak vectors in",
+                "accelerates local application build pipelines by 60% on",
+                "minimizes visual frame drops on lower-spec hardware for"
+            ]
+        };
+
+        const contexts = {
+            world: [
+                "major European trade corridors.",
+                "vulnerable marine oceanic reserves.",
+                "highly populated metropolitan transit lines.",
+                "cooperative post-carbon trade blocks.",
+                "historic architectural heritage zones."
+            ],
+            science: [
+                "the outer clouds of Venus.",
+                "extreme subterranean trench networks.",
+                "next-generation commercial fusion cells.",
+                "unstable atomic state supercomputers.",
+                "deep space navigation telemetry channels."
+            ],
+            culture: [
+                "densely packed smart urban centers.",
+                "interactive physical performance displays.",
+                "quiet rural creative workshop zones.",
+                "national orchestral performance halls.",
+                "indie film festival projection systems."
+            ],
+            sports: [
+                "the world's most gruelling ultra-marathons.",
+                "elite international velodrome competitions.",
+                "sub-freezing deep-ocean dive challenges.",
+                "high-speed Formula E street races.",
+                "altitude-controlled biomechanics training nodes."
+            ],
+            tech: [
+                "sandboxed on-device operating systems.",
+                "multi-thread localized browser engines.",
+                "unencrypted open-source data tunnels.",
+                "low-power portable hardware devices.",
+                "decentralized cryptographic network architectures."
+            ]
+        };
+
+        const snippetsList = [
+            "Observers reported a massive surge in community participation following the announcement. Locals are actively volunteering to sustain development.",
+            "Local authorities highlighted how standard, high-contrast, low-latency structures dramatically reduce performance strain on resources.",
+            "A comprehensive audit confirmed zero trace leaks or structural failures throughout the exhaustive forty-eight hour stress testing window.",
+            "The upcoming public specification outlines simple modular parameters to let third-party developers deploy customized widgets effortlessly.",
+            "By streamlining raw asset delivery pipelines, the team reduced initial page rendering latency and eliminated jitter entirely.",
+            "By offloading structural calculations to dedicated hardware co-processors, energy consumption benchmarks hit historic lows."
+        ];
+
+        // Master news array
+        let newsList = [...initialStories];
+        let activeFilter = 'all';
 
         // Theme management
         function setTheme(theme) {
@@ -761,96 +887,97 @@
             }
         }
 
-        // Bookmark management
-        function loadBookmarks() {
-            let bookmarks = JSON.parse(localStorage.getItem('bookmarks'));
-            if (!bookmarks) {
-                bookmarks = defaultBookmarks;
-                localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-            }
-            
-            const grid = document.getElementById('speed-dial');
-            grid.innerHTML = '';
-            
-            bookmarks.forEach((item, index) => {
-                const tile = document.createElement('a');
-                tile.className = 'tile';
-                tile.href = item.url;
-                
-                tile.innerHTML = `
-                    <div class="tile-delete" onclick="deleteBookmark(event, ${index})" title="Delete Bookmark">×</div>
-                    <span class="tile-icon">${item.icon}</span>
-                    <span>${item.title}</span>
-                `;
-                grid.appendChild(tile);
-            });
+        // News Redirection with User's Affiliate Tag ($0.015 per click)
+        function clickArticle(url) {
+            if (!url) return;
+            const delimiter = url.includes('?') ? '&' : '?';
+            const affiliateUrl = url + delimiter + 't=slash';
+            window.location.href = affiliateUrl;
         }
 
-        function deleteBookmark(event, index) {
-            event.preventDefault();
-            event.stopPropagation();
-            let bookmarks = JSON.parse(localStorage.getItem('bookmarks'));
-            bookmarks.splice(index, 1);
-            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-            loadBookmarks();
-        }
-
-        document.getElementById('add-bookmark-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const title = document.getElementById('new-title').value.trim();
-            let url = document.getElementById('new-url').value.trim();
-            
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-            }
-            
-            const randomEmojis = ["🌐", "⚓", "🎨", "🚀", "🛡️", "🔥", "🔮", "💡", "🧠", "💼", "🎮"];
-            const icon = randomEmojis[Math.floor(Math.random() * randomEmojis.length)];
-            
-            let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
-            bookmarks.push({ title, url, icon });
-            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-            
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-url').value = '';
-            loadBookmarks();
-        });
-
-        // News Widget Management
-        function renderNews(filter = 'all') {
+        // Render Current News Stories based on filter
+        function renderNews() {
             const feed = document.getElementById('news-feed');
             feed.innerHTML = '';
             
-            const filteredNews = filter === 'all' 
-                ? newsDatabase 
-                : newsDatabase.filter(item => item.category === filter);
+            const filtered = activeFilter === 'all' 
+                ? newsList 
+                : newsList.filter(item => item.category === activeFilter);
                 
-            filteredNews.forEach(item => {
+            filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'news-item';
-                card.onclick = function() {
-                    card.classList.toggle('expanded');
-                };
+                card.onclick = () => clickArticle(item.source);
                 
                 card.innerHTML = `
-                    <div class="news-meta">
-                        <span class="news-tag">${item.category.toUpperCase()}</span>
-                        <span>${item.time}</span>
+                    <img src="${item.image}" alt="Article Image" class="news-image" loading="lazy">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-tag">${item.category}</span>
+                            <span>${item.time}</span>
+                        </div>
+                        <h4 class="news-headline">${item.headline}</h4>
+                        <p class="news-snippet">${item.snippet}</p>
                     </div>
-                    <h4 class="news-headline">${item.headline}</h4>
-                    <p class="news-snippet">${item.snippet}</p>
                 `;
                 feed.appendChild(card);
             });
         }
 
+        // Filter news items
         function filterNews(category) {
+            activeFilter = category;
+            
             // Update active buttons
             const btns = document.querySelectorAll('.news-filter-btn');
             btns.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
             
-            renderNews(category);
+            const activeBtn = document.getElementById(`filter-${category}`) || document.getElementById('filter-all');
+            activeBtn.classList.add('active');
+            
+            renderNews();
+        }
+
+        // Generate infinite, realistic news stories dynamically for endless scroll
+        function generateMoreNews() {
+            const categories = ["world", "science", "culture", "sports", "tech"];
+            
+            for (let i = 0; i < 4; i++) {
+                const cat = categories[Math.floor(Math.random() * categories.length)];
+                
+                // Construct a randomized realistic headline
+                const subArray = subjects[cat];
+                const vrbArray = verbs[cat];
+                const ctxArray = contexts[cat];
+                
+                const sub = subArray[Math.floor(Math.random() * subArray.length)];
+                const vrb = vrbArray[Math.floor(Math.random() * vrbArray.length)];
+                const ctx = ctxArray[Math.floor(Math.random() * ctxArray.length)];
+                const headline = `${sub} ${vrb} ${ctx}`;
+                
+                const snippet = snippetsList[Math.floor(Math.random() * snippetsList.length)];
+                
+                // Select matching category images
+                const catImages = images[cat];
+                const image = catImages[Math.floor(Math.random() * catImages.length)];
+                
+                // Randomize source site
+                const src = sources[Math.floor(Math.random() * sources.length)];
+                
+                const minutesAgo = Math.floor(Math.random() * 50) + 5;
+                const timeStr = `${minutesAgo}m ago`;
+                
+                newsList.push({
+                    headline,
+                    category: cat,
+                    time: timeStr,
+                    snippet,
+                    image,
+                    source: src.url
+                });
+            }
+            
+            renderNews();
         }
 
         // Live Clock
@@ -888,7 +1015,7 @@
             localStorage.setItem('glass', enabled);
         }
 
-        // Fix middle-form network block on local file system (interceptor)
+        // Search Form handler
         document.querySelector('.search-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const query = document.getElementById('search-box').value.trim();
@@ -899,11 +1026,26 @@
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         url = 'https://' + url;
                     }
-                    window.location.href = url;
+                    window.location.href = url + (url.includes('?') ? '&' : '?') + 't=slash';
                 } else {
-                    // Navigate through simulated search page
+                    // Navigate through simulated search page with referral
                     window.location.href = "https://duckduckgo.com/?q=" + encodeURIComponent(query) + "&t=slash";
                 }
+            }
+        });
+
+        // Endless scrolling listener
+        let loading = false;
+        window.addEventListener('scroll', () => {
+            const trigger = document.getElementById('loading-trigger');
+            if (!trigger) return;
+            const rect = trigger.getBoundingClientRect();
+            if (rect.top <= window.innerHeight + 150 && !loading) {
+                loading = true;
+                setTimeout(() => {
+                    generateMoreNews();
+                    loading = false;
+                }, 400); // Super-responsive realistic load delay
             }
         });
 
@@ -923,7 +1065,6 @@
                 document.documentElement.style.setProperty('--glass-blur', enabled ? 'blur(12px)' : 'blur(0px)');
             }
 
-            loadBookmarks();
             renderNews();
             updateClock();
             setInterval(updateClock, 1000);

@@ -8,11 +8,11 @@ from PyQt6.QtCore import QUrl, QSize, QTimer, Qt, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QPushButton, QTabWidget, QToolBar, QStatusBar, QLabel,
-    QStackedWidget, QFrame, QCheckBox, QScrollArea, QSizePolicy, QFormLayout, QGroupBox
+    QStackedWidget, QFrame, QCheckBox, QScrollArea, QSizePolicy, QFormLayout, QGroupBox, QMenu
 )
 from PyQt6.QtGui import QIcon, QFont, QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
 
 # Configuration file path
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
@@ -138,72 +138,14 @@ class SLASHBrowser(QMainWindow):
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
             
-        # Main Layout: Sidebar on Left, Content stacked on Right
+        # Main Layout: Content stacked in full window (no sidebar)
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # 1. Left Navigation Sidebar
-        self.sidebar = QWidget()
-        self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(240)
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(16, 24, 16, 24)
-        sidebar_layout.setSpacing(10)
-        
-        # App Logo & Branding
-        logo_container = QHBoxLayout()
-        logo_icon = QFrame()
-        logo_icon.setFixedSize(36, 36)
-        logo_icon.setStyleSheet("background-color: #38BDF8; border-radius: 8px;")
-        logo_icon_layout = QHBoxLayout(logo_icon)
-        logo_icon_layout.setContentsMargins(0, 0, 0, 0)
-        logo_lbl = QLabel("S")
-        logo_lbl.setStyleSheet("color: white; font-weight: bold; font-size: 18px;")
-        logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_icon_layout.addWidget(logo_lbl)
-        
-        brand_title = QLabel("SLASH")
-        brand_title.setStyleSheet("color: white; font-weight: bold; font-size: 20px; letter-spacing: -0.5px;")
-        
-        logo_container.addWidget(logo_icon)
-        logo_container.addWidget(brand_title)
-        logo_container.addStretch()
-        sidebar_layout.addLayout(logo_container)
-        
-        brand_subtitle = QLabel("LOCALIZED WEB ENGINE")
-        brand_subtitle.setStyleSheet("color: #10B981; font-weight: bold; font-size: 9px; letter-spacing: 1px;")
-        sidebar_layout.addWidget(brand_subtitle)
-        
-        sidebar_layout.addSpacing(24)
-        
-        # Sidebar Menu Buttons
-        self.btn_browse = QPushButton("🌐  Web Browser")
-        self.btn_browse.setCheckable(True)
-        self.btn_browse.setChecked(True)
-        self.btn_browse.clicked.connect(lambda: self.switch_tab(0))
-        sidebar_layout.addWidget(self.btn_browse)
-        
-        self.btn_privacy = QPushButton("🔒  Privacy Control")
-        self.btn_privacy.setCheckable(True)
-        self.btn_privacy.clicked.connect(lambda: self.switch_tab(1))
-        sidebar_layout.addWidget(self.btn_privacy)
-        
-        self.btn_settings = QPushButton("⚙️  Support & Install")
-        self.btn_settings.setCheckable(True)
-        self.btn_settings.clicked.connect(lambda: self.switch_tab(2))
-        sidebar_layout.addWidget(self.btn_settings)
-        
-        sidebar_layout.addStretch()
-        
-        # Bottom system status on Sidebar
-        system_status = QLabel("●  System Secured")
-        system_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: bold;")
-        sidebar_layout.addWidget(system_status)
-        
-        # 2. Right Stacked Content Widget
+        # Central Stacked Content Widget
         self.content_stack = QStackedWidget()
         
         # Add Views
@@ -211,7 +153,6 @@ class SLASHBrowser(QMainWindow):
         self.init_privacy_view()       # Index 1
         self.init_settings_view()      # Index 2
         
-        main_layout.addWidget(self.sidebar)
         main_layout.addWidget(self.content_stack)
         
         # Apply Central Application Stylesheet (M3 Slate & Sky Theme)
@@ -219,10 +160,6 @@ class SLASHBrowser(QMainWindow):
         
     def switch_tab(self, index):
         self.content_stack.setCurrentIndex(index)
-        # Update checked status
-        self.btn_browse.setChecked(index == 0)
-        self.btn_privacy.setChecked(index == 1)
-        self.btn_settings.setChecked(index == 2)
         
     def apply_theme(self):
         self.setStyleSheet("""
@@ -354,6 +291,53 @@ class SLASHBrowser(QMainWindow):
         browser_layout.addWidget(self.nav_bar)
         
         # Navigation Buttons
+        self.menu_btn = QPushButton("//")
+        self.menu_btn.setToolTip("SLASH Engine Menu")
+        self.menu_btn.setStyleSheet("""
+            QPushButton {
+                font-family: monospace;
+                font-size: 18px;
+                font-weight: 900;
+                color: #38BDF8;
+                background-color: transparent;
+                border: none;
+                padding: 4px 10px;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                color: #FFFFFF;
+                border-radius: 6px;
+            }
+        """)
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1E293B;
+                color: #F8FAFC;
+                border: 1px solid #334155;
+                border-radius: 8px;
+                padding: 6px;
+            }
+            QMenu::item {
+                padding: 8px 16px;
+                border-radius: 4px;
+                color: #F8FAFC;
+            }
+            QMenu::item:selected {
+                background-color: #38BDF8;
+                color: #0F172A;
+                font-weight: bold;
+            }
+        """)
+        action_browse = menu.addAction("🌐  Web Browser")
+        action_browse.triggered.connect(lambda: self.switch_tab(0))
+        action_privacy = menu.addAction("🔒  Privacy Control")
+        action_privacy.triggered.connect(lambda: self.switch_tab(1))
+        action_settings = menu.addAction("⚙️  Support & Install")
+        action_settings.triggered.connect(lambda: self.switch_tab(2))
+        self.menu_btn.setMenu(menu)
+        self.nav_bar.addWidget(self.menu_btn)
+
         self.back_btn = QPushButton("←")
         self.back_btn.setToolTip("Go Back")
         self.back_btn.clicked.connect(lambda: self.active_browser().back() if self.active_browser() else None)
@@ -417,6 +401,15 @@ class SLASHBrowser(QMainWindow):
             qurl = QUrl.fromLocalFile(self.home_html_path)
             
         browser = QWebEngineView()
+        
+        # Optimize settings for performance, video playback and hardware acceleration
+        settings = browser.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        
         browser.setUrl(qurl)
         
         # Handle links opening in new windows (e.g. target="_blank")
@@ -430,6 +423,15 @@ class SLASHBrowser(QMainWindow):
         
     def handle_create_window(self, _type):
         browser = QWebEngineView()
+        
+        # Optimize settings for performance, video playback and hardware acceleration
+        settings = browser.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        
         i = self.tabs.addTab(browser, "New Tab")
         self.tabs.setCurrentIndex(i)
         browser.urlChanged.connect(lambda qurl, b=browser: self.on_url_changed(qurl, b))
@@ -1255,6 +1257,29 @@ class SLASHBrowser(QMainWindow):
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(24)
         
+        # Header layout with Return to Browser button
+        header_nav = QHBoxLayout()
+        back_btn = QPushButton("← Return to Browser")
+        back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1E293B;
+                color: #38BDF8;
+                border: 1px solid #334155;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #38BDF8;
+                color: #0F172A;
+            }
+        """)
+        back_btn.clicked.connect(lambda: self.switch_tab(0))
+        header_nav.addWidget(back_btn)
+        header_nav.addStretch()
+        layout.addLayout(header_nav)
+        
         lbl_title = QLabel("Privacy Control")
         lbl_title.setStyleSheet("font-size: 26px; font-weight: bold; color: white;")
         lbl_desc = QLabel("Configure local hardware-encrypted security layers and tracker blocking.")
@@ -1417,6 +1442,29 @@ class SLASHBrowser(QMainWindow):
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(24)
         
+        # Header layout with Return to Browser button
+        header_nav = QHBoxLayout()
+        back_btn = QPushButton("← Return to Browser")
+        back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1E293B;
+                color: #38BDF8;
+                border: 1px solid #334155;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #38BDF8;
+                color: #0F172A;
+            }
+        """)
+        back_btn.clicked.connect(lambda: self.switch_tab(0))
+        header_nav.addWidget(back_btn)
+        header_nav.addStretch()
+        layout.addLayout(header_nav)
+        
         lbl_title = QLabel("SLASH Linux & Desktop Support")
         lbl_title.setStyleSheet("font-size: 26px; font-weight: bold; color: white;")
         lbl_desc = QLabel("Configure desktop environment shortcuts, binary targets, and package managers autonomously.")
@@ -1480,6 +1528,15 @@ if __name__ == "__main__":
     sys.argv.append("--disable-setuid-sandbox")
     sys.argv.append("--ignore-certificate-errors")
     sys.argv.append("--disable-web-security")
+    
+    # Force GPU and Hardware Acceleration to eliminate YouTube video glitches & lag
+    sys.argv.append("--ignore-gpu-blocklist")
+    sys.argv.append("--enable-gpu-rasterization")
+    sys.argv.append("--enable-native-gpu-memory-buffers")
+    sys.argv.append("--num-raster-threads=4")
+    sys.argv.append("--enable-accelerated-video-decode")
+    sys.argv.append("--enable-accelerated-video-encode")
+    sys.argv.append("--enable-smooth-scrolling")
     
     app = QApplication(sys.argv)
     browser = SLASHBrowser()
